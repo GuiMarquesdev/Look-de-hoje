@@ -1,0 +1,62 @@
+datasource db {
+    provider = "mysql"
+    url = env("DATABASE_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+model Category {
+  id           String    @id @default(cuid()) @map("id")
+  name         String    @unique
+  created_at   DateTime  @default(now()) @map("created_at")
+  updated_at   DateTime  @updatedAt @map("updated_at")
+
+  pieces       Piece[]
+
+  @@map("categories")
+}
+
+model Piece {
+  id               String    @id @default(cuid()) @map("id")
+  name             String
+  category_id      String    @map("category_id")
+  status           String    @default("available") 
+  image_url        String?   @map("image_url")
+  images           Json?     
+  image_position_x Float?    @default(50) @map("image_position_x")
+  image_position_y Float?    @default(50) @map("image_position_y")
+  image_zoom       Float?    @default(100) @map("image_zoom")
+  description      String?
+  measurements     Json?     
+  created_at       DateTime  @default(now()) @map("created_at")
+  updated_at       DateTime  @updatedAt @map("updated_at")
+
+  category         Category  @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@map("pieces")
+}
+
+model StoreSetting {
+  id              String  @id @default(cuid()) @map("id")
+  store_name      String? @default("LooksdeHoje") @map("store_name")
+  instagram_url   String? @map("instagram_url")
+  whatsapp_url    String? @map("whatsapp_url")
+  email           String?
+  // A senha deve ser HASHED (ex: bcrypt) no backend.
+  admin_password  String  @map("admin_password") 
+  created_at      DateTime @default(now()) @map("created_at")
+  updated_at      DateTime @updatedAt @map("updated_at")
+
+  @@map("store_settings")
+}
+
+model HeroSetting {
+  id           String   @id @default(uuid()) @map("id")
+  slides       Json? // Tipo JSON para armazenar os slides
+  created_at   DateTime @default(now()) @map("created_at")
+  updated_at   DateTime @updatedAt @map("updated_at")
+
+  @@map("hero_settings")
+}

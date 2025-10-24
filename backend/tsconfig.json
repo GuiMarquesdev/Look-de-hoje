@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    // REMOVIDO: "rootDir": "./src",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "baseUrl": "./src", // Mantemos baseUrl para que o alias @/ funcione para o resto do código em src
+    "paths": {
+      "@/*": ["*"]
+    }
+  },
+  // O include está correto para incluir tudo em src e prisma:
+  "include": ["src/**/*", "prisma/**/*"],
+  "exclude": ["node_modules"]
+}
