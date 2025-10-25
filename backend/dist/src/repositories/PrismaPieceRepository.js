@@ -1,51 +1,64 @@
 "use strict";
+// backend/src/repositories/PrismaPieceRepository.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PrismaPieceRepository = void 0;
-// Helper para converter tipos do Prisma para o tipo da aplicação (Piece)
-const mapToPiece = (prismaPiece) => ({
-    ...prismaPiece,
-    status: prismaPiece.status,
-    images: prismaPiece.images || undefined,
-    measurements: prismaPiece.measurements || undefined,
-    category: prismaPiece.category
-        ? { name: prismaPiece.category.name }
-        : undefined,
-});
 class PrismaPieceRepository {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async findAll(filter) {
-        const prismaPieces = await this.prisma.piece.findMany({
-            // Inclui a categoria, como era feito no Supabase
-            include: { category: { select: { name: true } } },
+    async findAll() {
+        return this.prisma.piece.findMany({
             orderBy: { created_at: "desc" },
-            where: filter,
         });
-        return prismaPieces.map(mapToPiece);
     }
-    // ... Implementar findById, create, update, delete ...
     async findById(id) {
-        const prismaPiece = await this.prisma.piece.findUnique({
+        return this.prisma.piece.findUnique({
             where: { id },
-            include: { category: { select: { name: true } } },
         });
-        return prismaPiece ? mapToPiece(prismaPiece) : null;
     }
     async create(data) {
-        const prismaPiece = await this.prisma.piece.create({ data: data });
-        return mapToPiece(prismaPiece);
+        if (!data.title || !data.price || !data.category_id || !data.image_urls) {
+            throw new Error("Dados incompletos para criar a peça.");
+        }
+        return this.prisma.piece.create({
+            // O tipo PieceCreateInput DEVE aceitar 'title' após 'prisma generate'
+            data: {
+                title: data.title,
+                description: data.description,
+                price: data.price,
+                is_available: data.is_available ?? true,
+                category_id: data.category_id,
+                image_urls: data.image_urls,
+            },
+        });
     }
     async update(id, data) {
-        const prismaPiece = await this.prisma.piece.update({
+        const existingPiece = await this.prisma.piece.findUnique({ where: { id } });
+        if (!existingPiece) {
+            return null;
+        }
+        const updateData = {};
+        if (data.title !== undefined)
+            updateData.title = data.title;
+        if (data.description !== undefined)
+            updateData.description = data.description;
+        if (data.price !== undefined)
+            updateData.price = data.price;
+        if (data.is_available !== undefined)
+            updateData.is_available = data.is_available;
+        if (data.category_id !== undefined)
+            updateData.category_id = data.category_id;
+        if (data.image_urls !== undefined)
+            updateData.image_urls = data.image_urls;
+        return this.prisma.piece.update({
             where: { id },
-            data: data,
+            data: updateData, // O tipo PieceUpdateInput deve aceitar 'title'
         });
-        return mapToPiece(prismaPiece);
     }
     async delete(id) {
-        const prismaPiece = await this.prisma.piece.delete({ where: { id } });
-        return mapToPiece(prismaPiece);
+        await this.prisma.piece.delete({
+            where: { id },
+        });
     }
 }
 exports.PrismaPieceRepository = PrismaPieceRepository;

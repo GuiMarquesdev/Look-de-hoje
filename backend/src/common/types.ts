@@ -1,49 +1,62 @@
-export interface Piece {
-  id: string;
-  name: string;
-  category_id: string;
-  status: "available" | "rented";
-  image_url?: string | null;
-  images?: any; // JSON/any para o array de imagens
-  image_position_x?: number | null;
-  image_position_y?: number | null;
-  image_zoom?: number | null;
-  description?: string | null;
-  measurements?: any; // JSON/any para medidas
-  created_at: Date;
-  updated_at: Date;
-  category?: { name: string } | null;
-}
+// backend/src/common/types.ts
 
-// Interface simplificada das configurações
-export interface StoreSetting {
-  id: string;
-  admin_password: string;
+// DTO para as informações de configuração da loja
+export interface StoreSettingsDTO {
   store_name: string;
-  instagram_url?: string | null;
-  whatsapp_url?: string | null;
-  email?: string | null;
+  instagram_url?: string;
+  whatsapp_url?: string;
+  email?: string;
 }
 
-export interface Category {
-  id: string;
-  name: string;
-  piece_count?: number;
+// DTO para a alteração de senha
+export interface ChangePasswordDTO {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
 }
 
-export interface HeroSlide {
-  id: string;
+// DTO para a criação de uma nova peça (Todos os campos obrigatórios para criação)
+export interface CreatePieceDTO {
   title: string;
-  subtitle: string;
-  image_url: string;
-  image_fit?: "cover" | "contain" | "fill" | "none";
-  image_position?: string;
-  image_position_x?: number;
-  image_position_y?: number;
-  image_zoom?: number;
+  description?: string;
+  price: number;
+  is_available: boolean;
+  category_id: string;
+  // A URL/key da imagem será salva, não o arquivo em si
+  image_urls: string[];
 }
 
-export interface HeroSettings {
+// DTO para atualizar uma peça existente (Todos os campos são opcionais para atualização)
+export interface UpdatePieceDTO {
+  title?: string;
+  description?: string;
+  price?: number;
+  is_available?: boolean;
+  category_id?: string;
+  image_urls?: string[];
+}
+
+// DTO para a criação de Categoria
+export interface CreateCategoryDTO {
+  name: string;
+  slug: string;
+  is_active: boolean;
+}
+
+// DTO para a atualização de Categoria
+export interface UpdateCategoryDTO {
+  name?: string;
+  slug?: string;
+  is_active?: boolean;
+}
+
+// DTO para a criação/atualização das configurações do Hero (banner)
+export interface HeroSettingsDTO {
   id: string;
-  slides: HeroSlide[];
+  title?: string;
+  subtitle?: string;
+  cta_text?: string;
+  cta_link?: string;
+  background_image_url: string; // URL da imagem principal do Hero
+  is_active: boolean;
 }

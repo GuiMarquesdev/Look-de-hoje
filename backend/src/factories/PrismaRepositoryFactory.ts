@@ -1,21 +1,19 @@
+// backend/src/factories/PrismaRepositoryFactory.ts
+
 import { PrismaClient } from "@prisma/client";
 import { IRepositoryFactory } from "./IRepositoryFactory";
-import { IPieceRepository } from "../interfaces/IPieceRepository";
 import { PrismaPieceRepository } from "../repositories/PrismaPieceRepository";
-import { ICategoryRepository } from "../interfaces/ICategoryRepository";
 import { PrismaCategoryRepository } from "../repositories/PrismaCategoryRepository";
-import { IStoreSettingRepository } from "../interfaces/IStoreSettingRepository";
 import { PrismaStoreSettingRepository } from "../repositories/PrismaStoreSettingRepository";
-import { IHeroSettingRepository } from "../interfaces/IHeroSettingRepository";
+// IMPORTAÇÃO CORRETA
 import { PrismaHeroSettingRepository } from "../repositories/PrismaHeroSettingRepository";
+import { IPieceRepository } from "../interfaces/IPieceRepository";
+import { ICategoryRepository } from "../interfaces/ICategoryRepository";
+import { IStoreSettingRepository } from "../interfaces/IStoreSettingRepository";
+import { IHeroSettingRepository } from "../interfaces/IHeroSettingRepository";
 
-// Injeção da dependência PrismaClient na Factory
 export class PrismaRepositoryFactory implements IRepositoryFactory {
-  private prisma: PrismaClient;
-
-  constructor(prismaClient: PrismaClient) {
-    this.prisma = prismaClient;
-  }
+  constructor(private prisma: PrismaClient) {}
 
   createPieceRepository(): IPieceRepository {
     return new PrismaPieceRepository(this.prisma);
@@ -29,6 +27,7 @@ export class PrismaRepositoryFactory implements IRepositoryFactory {
     return new PrismaStoreSettingRepository(this.prisma);
   }
 
+  // USO CORRETO
   createHeroSettingRepository(): IHeroSettingRepository {
     return new PrismaHeroSettingRepository(this.prisma);
   }

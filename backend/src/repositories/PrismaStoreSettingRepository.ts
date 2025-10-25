@@ -1,27 +1,46 @@
-import { PrismaClient } from "@prisma/client";
+// backend/src/repositories/PrismaStoreSettingRepository.ts
+
+import { PrismaClient, StoreSetting } from "@prisma/client"; // CORRIGIDO: StoreSetting
 import { IStoreSettingRepository } from "../interfaces/IStoreSettingRepository";
-import { StoreSetting } from "../common/types";
+import { StoreSettingsDTO } from "../common/types";
+
+const SETTINGS_ID = "settings";
 
 export class PrismaStoreSettingRepository implements IStoreSettingRepository {
   constructor(private prisma: PrismaClient) {}
 
+  // CORRIGIDO: Nome do método para 'getSettings' e tipo de retorno StoreSetting
   async getSettings(): Promise<StoreSetting | null> {
-    // Assume que só haverá uma linha na tabela de configurações
-    const settings = await this.prisma.storeSetting.findFirst();
-    return settings as StoreSetting | null;
+    return this.prisma.storeSetting.findUnique({
+      // CORRIGIDO: .storeSetting
+      where: { id: SETTINGS_ID },
+    });
   }
 
-  async updateSettings(data: Partial<StoreSetting>): Promise<StoreSetting> {
-    const currentSettings = await this.getSettings();
-    if (!currentSettings) {
-      throw new Error("Store settings not found. Cannot update.");
-    }
-
-    const updatedSettings = await this.prisma.storeSetting.update({
-      where: { id: currentSettings.id },
-      data,
+  // CORRIGIDO: Tipo de retorno StoreSetting
+  async updateStoreInfo(
+    data: Partial<StoreSettingsDTO>
+  ): Promise<StoreSetting> {
+    return this.prisma.storeSetting.update({
+      // CORRIGIDO: .storeSetting
+      where: { id: SETTINGS_ID },
+      data: {
+        store_name: data.store_name,
+        instagram_url: data.instagram_url,
+        whatsapp_url: data.whatsapp_url,
+        email: data.email,
+      },
     });
+  }
 
-    return updatedSettings as StoreSetting;
+  // CORRIGIDO: Tipo de retorno StoreSetting
+  async updateAdminPassword(hashedPassword: string): Promise<StoreSetting> {
+    return this.prisma.storeSetting.update({
+      // CORRIGIDO: .storeSetting
+      where: { id: SETTINGS_ID },
+      data: {
+        admin_password: hashedPassword,
+      },
+    });
   }
 }

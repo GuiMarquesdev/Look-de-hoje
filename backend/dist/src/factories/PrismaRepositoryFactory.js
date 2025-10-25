@@ -1,14 +1,14 @@
 "use strict";
+// backend/src/factories/PrismaRepositoryFactory.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PrismaRepositoryFactory = void 0;
 const PrismaPieceRepository_1 = require("../repositories/PrismaPieceRepository");
 const PrismaCategoryRepository_1 = require("../repositories/PrismaCategoryRepository");
 const PrismaStoreSettingRepository_1 = require("../repositories/PrismaStoreSettingRepository");
 const PrismaHeroSettingRepository_1 = require("../repositories/PrismaHeroSettingRepository");
-// Injeção da dependência PrismaClient na Factory
 class PrismaRepositoryFactory {
-    constructor(prismaClient) {
-        this.prisma = prismaClient;
+    constructor(prisma) {
+        this.prisma = prisma;
     }
     createPieceRepository() {
         return new PrismaPieceRepository_1.PrismaPieceRepository(this.prisma);
@@ -19,6 +19,7 @@ class PrismaRepositoryFactory {
     createStoreSettingRepository() {
         return new PrismaStoreSettingRepository_1.PrismaStoreSettingRepository(this.prisma);
     }
+    // USO CORRETO
     createHeroSettingRepository() {
         return new PrismaHeroSettingRepository_1.PrismaHeroSettingRepository(this.prisma);
     }

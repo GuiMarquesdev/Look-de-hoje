@@ -1,81 +1,157 @@
 "use strict";
 // backend/src/api/routes/admin.route.ts
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createAdminRouter = void 0;
+exports.createAdminRoutes = void 0;
 const express_1 = require("express");
 const AdminService_1 = require("../../services/AdminService");
-const createAdminRouter = (repositoryFactory) => {
+const jwt = __importStar(require("jsonwebtoken"));
+// Assumindo que a constante JWT_SECRET está disponível via process.env
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_insecure";
+// Middleware para verificar o token JWT e autenticar o administrador
+const authMiddleware = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res
+            .status(401)
+            .json({ message: "Autenticação necessária. Token não fornecido." });
+    }
+    const token = authHeader.split(" ")[1];
+    try {
+        // Tenta verificar o token usando a chave secreta
+        const payload = jwt.verify(token, JWT_SECRET);
+        req.user = payload; // Anexa as informações do usuário à requisição (útil para logs)
+        next();
+    }
+    catch (err) {
+        return res.status(401).json({ message: "Token inválido ou expirado." });
+    }
+};
+const createAdminRoutes = (repositoryFactory) => {
     const router = (0, express_1.Router)();
-    const adminService = new AdminService_1.AdminService(repositoryFactory);
-    // POST /api/admin/login - Login do Admin (JÁ IMPLEMENTADO)
+    const storeSettingRepository = repositoryFactory.createStoreSettingRepository();
+    const adminService = new AdminService_1.AdminService(storeSettingRepository);
+    // ------------------------------------------
+    // ROTA DE LOGIN (POST /api/admin/login) - NÃO Protegida
+    // ------------------------------------------
     router.post("/login", async (req, res) => {
-        // ... (lógica existente)
-        const { password } = req.body;
-        if (!password) {
-            return res
-                .status(400)
-                .json({ success: false, message: "Senha é obrigatória" });
-        }
         try {
-            const isAuthenticated = await adminService.checkPassword(password);
-            if (isAuthenticated) {
+            const { email, password } = req.body;
+            if (!email || !password) {
                 return res
-                    .status(200)
-                    .json({ success: true, message: "Login bem-sucedido" });
+                    .status(400)
+                    .json({ message: "Email e senha são obrigatórios." });
             }
-            else {
-                return res
-                    .status(401)
-                    .json({ success: false, message: "Credenciais inválidas" });
-            }
+            const result = await adminService.login(email, password);
+            // Retorna o token e os dados do usuário para o frontend
+            return res.json(result);
         }
         catch (error) {
-            console.error(error);
-            return res
-                .status(500)
-                .json({ success: false, message: "Erro interno do servidor" });
+            const msg = error instanceof Error
+                ? error.message
+                : "Erro interno ao tentar fazer login.";
+            return res.status(401).json({ message: msg });
         }
-        // ...
     });
-    // GET /api/admin/settings - Obter configurações (JÁ IMPLEMENTADO)
+    // ------------------------------------------
+    // APLICA O MIDDLEWARE DE AUTENTICAÇÃO PARA TODAS AS ROTAS ABAIXO
+    // ------------------------------------------
+    router.use(authMiddleware);
+    // ------------------------------------------
+    // ROTA GET CONFIGURAÇÕES (GET /api/admin/settings)
+    // ------------------------------------------
     router.get("/settings", async (req, res) => {
         try {
-            // Obtido via service (que remove a senha)
             const settings = await adminService.getSettings();
-            return res.status(200).json(settings);
+            if (!settings) {
+                return res
+                    .status(404)
+                    .json({ message: "Configurações não encontradas." });
+            }
+            return res.json(settings);
         }
         catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: "Erro ao buscar configurações" });
+            return res.status(500).json({ message: "Erro ao buscar configurações." });
         }
     });
-    // PUT /api/admin/settings - Atualizar informações da loja
-    router.put("/password", async (req, res) => {
-        const { currentPassword, newPassword } = req.body;
-        if (!currentPassword || !newPassword) {
-            return res
-                .status(400)
-                .json({ message: "Campos de senha obrigatórios não preenchidos." });
-        }
+    // ------------------------------------------
+    // ROTA PUT ATUALIZA INFORMAÇÕES DA LOJA (PUT /api/admin/settings)
+    // ------------------------------------------
+    router.put("/settings", async (req, res) => {
         try {
-            await adminService.updatePassword(currentPassword, newPassword);
-            return res
-                .status(200)
-                .json({ success: true, message: "Senha alterada com sucesso." });
+            const data = req.body;
+            const updatedSettings = await adminService.updateStoreInfo(data);
+            return res.json(updatedSettings);
         }
         catch (error) {
-            console.error("Erro ao trocar senha:", error);
-            // --- CORREÇÃO DE TIPAGEM AQUI ---
-            let errorMessage = "Erro ao alterar senha.";
-            // Verifica se é um objeto e possui a propriedade 'message' (como um objeto Error)
-            if (error && typeof error === "object" && "message" in error) {
-                errorMessage = error.message;
+            const msg = error instanceof Error
+                ? error.message
+                : "Erro interno ao atualizar informações.";
+            return res.status(400).json({ message: msg });
+        }
+    });
+    // ------------------------------------------
+    // ROTA PUT ALTERAR SENHA (PUT /api/admin/password)
+    // ------------------------------------------
+    router.put("/password", async (req, res) => {
+        try {
+            const { current_password, new_password, confirm_password } = req.body;
+            // Validação básica
+            if (!current_password ||
+                !new_password ||
+                new_password !== confirm_password) {
+                return res
+                    .status(400)
+                    .json({ message: "Nova senha e confirmação não coincidem." });
             }
-            // ---------------------------------
-            // O AdminService lança um erro 401 (Não Autorizado) para senhas incorretas
-            return res.status(401).json({ message: errorMessage });
+            if (new_password.length < 6) {
+                return res
+                    .status(400)
+                    .json({ message: "Nova senha deve ter pelo menos 6 caracteres." });
+            }
+            await adminService.changePassword(current_password, new_password);
+            // 204 No Content - Sucesso, mas não há nada novo para retornar
+            return res.status(204).send();
+        }
+        catch (error) {
+            const msg = error instanceof Error
+                ? error.message
+                : "Erro interno ao alterar senha.";
+            return res.status(401).json({ message: msg });
         }
     });
     return router;
 };
-exports.createAdminRouter = createAdminRouter;
+exports.createAdminRoutes = createAdminRoutes;

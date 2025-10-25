@@ -1,59 +1,76 @@
-import { PrismaClient, Piece as PrismaPiece } from "@prisma/client";
-import { IPieceRepository } from "../interfaces/IPieceRepository";
-import { Piece } from "../common/types";
+// backend/src/repositories/PrismaPieceRepository.ts
 
-// Helper para converter tipos do Prisma para o tipo da aplicação (Piece)
-const mapToPiece = (
-  prismaPiece: PrismaPiece & { category?: { name: string } | null }
-): Piece => ({
-  ...prismaPiece,
-  status: prismaPiece.status as "available" | "rented",
-  images: prismaPiece.images || undefined,
-  measurements: prismaPiece.measurements || undefined,
-  category: prismaPiece.category
-    ? { name: prismaPiece.category.name }
-    : undefined,
-});
+import { PrismaClient, Piece, Prisma } from "@prisma/client"; // Importa Prisma para tipos
+import { IPieceRepository } from "../interfaces/IPieceRepository";
+import { CreatePieceDTO, UpdatePieceDTO } from "../common/types";
+
+type PieceCreatePrismaInput = Prisma.PieceCreateInput;
+type PieceUpdatePrismaInput = Prisma.PieceUpdateInput;
 
 export class PrismaPieceRepository implements IPieceRepository {
   constructor(private prisma: PrismaClient) {}
 
-  async findAll(filter?: any): Promise<Piece[]> {
-    const prismaPieces = await this.prisma.piece.findMany({
-      // Inclui a categoria, como era feito no Supabase
-      include: { category: { select: { name: true } } },
+  async findAll(): Promise<Piece[]> {
+    return this.prisma.piece.findMany({
       orderBy: { created_at: "desc" },
-      where: filter,
     });
-    return prismaPieces.map(mapToPiece);
   }
 
-  // ... Implementar findById, create, update, delete ...
   async findById(id: string): Promise<Piece | null> {
-    const prismaPiece = await this.prisma.piece.findUnique({
+    return this.prisma.piece.findUnique({
       where: { id },
-      include: { category: { select: { name: true } } },
     });
-    return prismaPiece ? mapToPiece(prismaPiece) : null;
   }
 
-  async create(
-    data: Omit<Piece, "id" | "created_at" | "updated_at" | "category">
-  ): Promise<Piece> {
-    const prismaPiece = await this.prisma.piece.create({ data: data as any });
-    return mapToPiece(prismaPiece as any);
+  async create(data: CreatePieceDTO): Promise<Piece> {
+    if (!data.title || !data.price || !data.category_id || !data.image_urls) {
+      throw new Error("Dados incompletos para criar a peça.");
+    }
+
+    // CORREÇÃO: Usa 'as any' para contornar o tipo desatualizado/corrompido PieceCreateInput
+    const createPayload: PieceCreatePrismaInput = {
+      title: data.title,
+      description: data.description,
+      price: data.price,
+      is_available: data.is_available ?? true,
+      category: { connect: { id: data.category_id } },
+      image_urls: data.image_urls,
+    } as any; // <<<< Asserção de tipo aqui
+
+    return this.prisma.piece.create({
+      data: createPayload,
+    });
   }
 
-  async update(id: string, data: Partial<Piece>): Promise<Piece> {
-    const prismaPiece = await this.prisma.piece.update({
+  async update(
+    id: string,
+    data: Partial<UpdatePieceDTO>
+  ): Promise<Piece | null> {
+    const existingPiece = await this.prisma.piece.findUnique({ where: { id } });
+    if (!existingPiece) {
+      return null;
+    }
+
+    const updateData: { [key: string]: any } = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        updateData[key] = value;
+      }
+    }
+    if (updateData.category_id !== undefined) {
+      updateData.category = { connect: { id: updateData.category_id } };
+      delete updateData.category_id;
+    }
+
+    return this.prisma.piece.update({
       where: { id },
-      data: data as any,
+      data: updateData as PieceUpdatePrismaInput, // Usa 'as any' ou tipo Prisma
     });
-    return mapToPiece(prismaPiece as any);
   }
 
-  async delete(id: string): Promise<Piece> {
-    const prismaPiece = await this.prisma.piece.delete({ where: { id } });
-    return mapToPiece(prismaPiece as any);
+  async delete(id: string): Promise<void> {
+    await this.prisma.piece.delete({
+      where: { id },
+    });
   }
 }

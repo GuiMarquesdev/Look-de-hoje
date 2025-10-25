@@ -1,69 +1,52 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+// backend/src/api/server.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importStar(require("express"));
+const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-const PrismaRepositoryFactory_1 = require("@/factories/PrismaRepositoryFactory");
-const prisma_1 = require("@/database/prisma");
-const pieces_route_1 = require("./routes/pieces.route");
+const client_1 = require("@prisma/client");
+const PrismaRepositoryFactory_1 = require("../factories/PrismaRepositoryFactory");
 const admin_route_1 = require("./routes/admin.route");
+const pieces_route_1 = require("./routes/pieces.route");
 const hero_route_1 = require("./routes/hero.route");
-// Para ler variáveis de ambiente
-require("dotenv/config");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
-// Middlewares
-app.use((0, cors_1.default)({
-    origin: ["http://localhost:8080", "http://localhost:8080/"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-}));
-app.use((0, express_1.json)()); // Para processar body em JSON
-// Inicialização da Arquitetura
-const prisma = (0, prisma_1.createPrismaClient)();
+const prisma = new client_1.PrismaClient();
 const repositoryFactory = new PrismaRepositoryFactory_1.PrismaRepositoryFactory(prisma);
-// Rotas
-app.use("/api/pieces", (0, pieces_route_1.createPieceRouter)(repositoryFactory));
-app.use("/api/admin", (0, admin_route_1.createAdminRouter)(repositoryFactory));
-app.use("/api/hero", (0, hero_route_1.createHeroRouter)(repositoryFactory));
-// Rota de teste
-app.get("/", (req, res) => {
-    res.send("Backend LooksdeHoje rodando com Express e Prisma!");
+app.use((0, cors_1.default)());
+app.use(express_1.default.json());
+const adminRouter = (0, admin_route_1.createAdminRoutes)(repositoryFactory);
+const piecesRouter = (0, pieces_route_1.createPiecesRoutes)(repositoryFactory);
+const heroRouter = (0, hero_route_1.createHeroRouter)(repositoryFactory);
+app.use("/api/admin", adminRouter);
+app.use("/api/pieces", piecesRouter);
+app.use("/api/hero", heroRouter);
+app.get("/api", (req, res) => {
+    res.json({ message: "API Look de Hoje está online!" });
 });
-app.listen(PORT, () => {
-    console.log(`🚀 Backend rodando em http://localhost:${PORT}`);
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ message: "Algo deu errado no servidor!" });
+});
+const server = app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+});
+// Tratamento de Encerramento (mantido)
+process.on("SIGTERM", () => {
+    console.log("SIGTERM signal received: closing HTTP server");
+    server.close(async () => {
+        console.log("HTTP server closed");
+        await prisma.$disconnect();
+        process.exit(0);
+    });
+});
+process.on("SIGINT", () => {
+    console.log("SIGINT signal received: closing HTTP server");
+    server.close(async () => {
+        console.log("HTTP server closed");
+        await prisma.$disconnect();
+        process.exit(0);
+    });
 });

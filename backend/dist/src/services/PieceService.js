@@ -3,34 +3,27 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PieceService = void 0;
 class PieceService {
-    // Usa o Factory Method para criar a dependência (PrismaPieceRepository)
-    constructor(repositoryFactory) {
-        this.pieceRepository = repositoryFactory.createPieceRepository();
+    constructor(pieceRepository) {
+        this.pieceRepository = pieceRepository;
     }
-    // Lógica para listar todas as peças
-    async getAllPieces(filter) {
-        return this.pieceRepository.findAll(filter);
+    async getAllPieces() {
+        return this.pieceRepository.findAll();
     }
-    // Lógica para obter uma peça por ID
     async getPieceById(id) {
         return this.pieceRepository.findById(id);
     }
-    // Lógica para criar uma nova peça
     async createPiece(data) {
+        // Adicionar validações de negócio aqui, se necessário
+        // Ex: Verificar se a category_id existe
         return this.pieceRepository.create(data);
     }
-    // Lógica para atualizar uma peça
     async updatePiece(id, data) {
+        // Adicionar validações de negócio aqui, se necessário
         return this.pieceRepository.update(id, data);
     }
-    // Lógica para deletar uma peça
     async deletePiece(id) {
-        return this.pieceRepository.delete(id);
-    }
-    // Lógica para alternar o status
-    async toggleStatus(id, currentStatus) {
-        const newStatus = currentStatus === "available" ? "rented" : "available";
-        return this.pieceRepository.update(id, { status: newStatus });
+        // Adicionar validações de negócio aqui, se necessário
+        await this.pieceRepository.delete(id);
     }
 }
 exports.PieceService = PieceService;

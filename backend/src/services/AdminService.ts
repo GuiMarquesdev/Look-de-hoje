@@ -1,89 +1,103 @@
 // backend/src/services/AdminService.ts
-import { IRepositoryFactory } from "../factories/IRepositoryFactory";
-import { IStoreSettingRepository } from "../interfaces/IStoreSettingRepository";
-import { IAdminService } from "../interfaces/IAdminService";
-import { StoreSetting } from "../common/types";
-import * as bcrypt from "bcrypt";
 
-// Variável para definir a força do hash (10 é um bom padrão)
-const HASH_SALT_ROUNDS = 10;
+import bcrypt from "bcrypt";
+import * as jwt from "jsonwebtoken";
+import { StoreSetting } from "@prisma/client";
+import { IAdminService } from "../interfaces/IAdminService";
+import { IStoreSettingRepository } from "../interfaces/IStoreSettingRepository";
+import { StoreSettingsDTO } from "../common/types";
+
+// O JWT_SECRET DEVE vir de uma variável de ambiente (backend/.env)
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_insecure";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@exemplo.com";
 
 export class AdminService implements IAdminService {
-  private storeSettingRepository: IStoreSettingRepository;
+  constructor(private storeSettingRepository: IStoreSettingRepository) {}
 
-  constructor(repositoryFactory: IRepositoryFactory) {
-    this.storeSettingRepository =
-      repositoryFactory.createStoreSettingRepository();
-  }
-
-  // Lógica de Login: Compara a senha fornecida com o hash armazenado
-  async checkPassword(password: string): Promise<boolean> {
+  // 1. Implementação do Login
+  async login(
+    email: string,
+    password: string
+  ): Promise<{
+    token: string;
+    user: { id: string; email: string; store_name: string };
+  }> {
     const settings = await this.storeSettingRepository.getSettings();
-    if (!settings) return false;
 
-    // Se o backend iniciar sem um hash inicial, ele tentará o texto puro (BAD PRACTICE, but safe for initial migration)
-    if (settings.admin_password === "admin123") {
-      // Se a senha for a padrão não hasheada, faça o hash e atualize
-      if (password === "admin123") {
-        const newHash = await bcrypt.hash("admin123", HASH_SALT_ROUNDS);
-        await this.storeSettingRepository.updateSettings({
-          admin_password: newHash,
-        });
-        return true;
-      }
+    if (!settings || email !== ADMIN_EMAIL) {
+      throw new Error("Credenciais inválidas.");
     }
 
-    try {
-      const isMatch = await bcrypt.compare(password, settings.admin_password);
-      return isMatch;
-    } catch (e) {
-      console.error("Erro ao comparar senha (hash inválido):", e);
-      return false;
+    // Compara a senha (plain text) com o hash armazenado
+    const passwordMatch = await bcrypt.compare(
+      password,
+      settings.admin_password
+    );
+
+    if (!passwordMatch) {
+      throw new Error("Credenciais inválidas.");
     }
+
+    // CORREÇÃO: Garante que store_name seja uma string, usando '' se for null.
+    const payload = {
+      id: settings.id,
+      email: ADMIN_EMAIL,
+      store_name: settings.store_name ?? "", // Usa string vazia se settings.store_name for null
+    };
+
+    // Gera o token JWT
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "1d" });
+
+    // O tipo de retorno agora está correto, pois payload.store_name é garantidamente string
+    return { token, user: payload };
   }
 
-  // Lógica para obter configurações (sem a senha)
-  async getSettings(): Promise<StoreSetting | null> {
+  // 2. Implementação do GET Settings
+  async getSettings(): Promise<Partial<StoreSetting> | null> {
     const settings = await this.storeSettingRepository.getSettings();
     if (settings) {
-      // Remove a senha antes de enviar para o frontend
+      // Remove a senha antes de enviar ao frontend!
       const { admin_password, ...safeSettings } = settings;
-      return safeSettings as StoreSetting;
+      return safeSettings;
     }
     return null;
   }
 
-  // Lógica para salvar informações da loja (GET /api/admin/settings)
-  async updateSettings(data: Partial<StoreSetting>): Promise<StoreSetting> {
-    return this.storeSettingRepository.updateSettings(data);
+  // 3. Implementação do Update Store Info
+  async updateStoreInfo(
+    data: Partial<StoreSettingsDTO>
+  ): Promise<StoreSetting> {
+    if (!data.store_name) {
+      throw new Error("O nome da loja é obrigatório.");
+    }
+    // Certifique-se de que o método no repositório também retorna StoreSetting
+    return this.storeSettingRepository.updateStoreInfo(data);
   }
 
-  // Lógica para trocar a senha (PUT /api/admin/password)
-  async updatePassword(
+  // 4. Implementação do Change Password
+  async changePassword(
     currentPassword: string,
     newPassword: string
-  ): Promise<StoreSetting> {
+  ): Promise<void> {
     const settings = await this.storeSettingRepository.getSettings();
-    if (!settings) throw new Error("Configurações da loja não encontradas.");
 
-    // 1. Verifica se a senha atual é válida
-    const isValid = await bcrypt.compare(
+    if (!settings) {
+      throw new Error("Configurações não encontradas.");
+    }
+
+    // Verifica a senha atual
+    const isCurrentPasswordValid = await bcrypt.compare(
       currentPassword,
       settings.admin_password
     );
-    if (!isValid) {
-      throw new Error("Senha atual incorreta");
+    if (!isCurrentPasswordValid) {
+      throw new Error("Senha atual incorreta.");
     }
 
-    // 2. Valida o tamanho da nova senha
-    if (newPassword.length < 6) {
-      throw new Error("Nova senha deve ter pelo menos 6 caracteres");
-    }
+    // Gera o hash da nova senha
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // 3. Gera o novo hash e atualiza
-    const newPasswordHash = await bcrypt.hash(newPassword, HASH_SALT_ROUNDS);
-    return this.storeSettingRepository.updateSettings({
-      admin_password: newPasswordHash,
-    });
+    // Salva o novo hash no banco de dados
+    await this.storeSettingRepository.updateAdminPassword(newHashedPassword);
   }
 }
