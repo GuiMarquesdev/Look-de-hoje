@@ -20,16 +20,15 @@ class PrismaPieceRepository {
         if (!data.title || !data.price || !data.category_id || !data.image_urls) {
             throw new Error("Dados incompletos para criar a peça.");
         }
-        // CORREÇÃO: Utiliza o payload DTO completo e usa asserção de tipo 'as any'
-        // para contornar o erro TS2353 que erroneamente diz que 'title' não existe.
+        // CORREÇÃO: Usa 'as any' para contornar o tipo desatualizado/corrompido PieceCreateInput
         const createPayload = {
             title: data.title,
             description: data.description,
             price: data.price,
             is_available: data.is_available ?? true,
-            category: { connect: { id: data.category_id } }, // Conecta a peça à categoria pelo ID
+            category: { connect: { id: data.category_id } },
             image_urls: data.image_urls,
-        }; // Usamos 'as any' pois sabemos que 'title' existe no schema real
+        }; // <<<< Asserção de tipo aqui
         return this.prisma.piece.create({
             data: createPayload,
         });
@@ -39,22 +38,19 @@ class PrismaPieceRepository {
         if (!existingPiece) {
             return null;
         }
-        // Constrói o objeto de atualização com flexibilidade
         const updateData = {};
         for (const [key, value] of Object.entries(data)) {
             if (value !== undefined) {
                 updateData[key] = value;
             }
         }
-        // O campo 'category_id' precisa ser tratado para usar a sintaxe 'connect' do Prisma
         if (updateData.category_id !== undefined) {
             updateData.category = { connect: { id: updateData.category_id } };
-            delete updateData.category_id; // Remove o campo bruto, já que ele é um relacionamento
+            delete updateData.category_id;
         }
-        // Usa 'as any' para contornar problemas de tipagem com objetos dinâmicos
         return this.prisma.piece.update({
             where: { id },
-            data: updateData,
+            data: updateData, // Usa 'as any' ou tipo Prisma
         });
     }
     async delete(id) {

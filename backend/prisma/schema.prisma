@@ -44,7 +44,6 @@ model StoreSetting {
   instagram_url   String? @map("instagram_url")
   whatsapp_url    String? @map("whatsapp_url")
   email           String?
-  // A senha deve ser HASHED (ex: bcrypt) no backend.
   admin_password  String  @map("admin_password") 
   created_at      DateTime @default(now()) @map("created_at")
   updated_at      DateTime @updatedAt @map("updated_at")
