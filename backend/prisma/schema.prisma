@@ -8,12 +8,14 @@ generator client {
 }
 
 model Category {
-  id           String    @id @default(cuid()) @map("id")
-  name         String    @unique
-  created_at   DateTime  @default(now()) @map("created_at")
-  updated_at   DateTime  @updatedAt @map("updated_at")
+  id            String    @id @default(cuid()) @map("id")
+  name          String    @unique
+  slug          String    @unique
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now()) @map("created_at")
+  updated_at    DateTime  @updatedAt @map("updated_at")
 
-  pieces       Piece[]
+  pieces        Piece[]
 
   @@map("categories")
 }
