@@ -1,9 +1,16 @@
-import React, { useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Upload, X, GripVertical } from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Upload, X } from "lucide-react";
+import { toast } from "sonner";
+// Import do Supabase REMOVIDO
 
+/**
+ * Interface para a imagem do produto.
+ * - url: Pode ser uma URL pública (se a imagem já existe) ou uma URL de objeto local (para preview).
+ * - order: A ordem da imagem.
+ * - file: O objeto File real, usado para upload se a imagem for nova.
+ * - isNew: Flag para identificar imagens que precisam de upload.
+ */
 interface ProductImage {
   url: string;
   order: number;
@@ -20,94 +27,53 @@ interface MultipleImageUploadProps {
 const MultipleImageUpload: React.FC<MultipleImageUploadProps> = ({
   images = [],
   onChange,
-  maxImages = 10
+  maxImages = 10,
 }) => {
-  const [uploading, setUploading] = useState(false);
+  // Estado de 'uploading' REMOVIDO - o pai gerencia isso.
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    
+
     if (images.length + files.length > maxImages) {
       toast.error(`Máximo de ${maxImages} imagens permitidas`);
       return;
     }
 
     const newImages: ProductImage[] = files.map((file, index) => {
+      // Cria uma URL local temporária para preview da imagem
       const url = URL.createObjectURL(file);
       return {
         url,
         order: images.length + index,
         file,
-        isNew: true
+        isNew: true,
       };
     });
 
+    // Envia a lista combinada (antigas + novas) para o componente pai
     onChange([...images, ...newImages]);
   };
 
-  const handleRemoveImage = (index: number) => {
-    const newImages = images.filter((_, i) => i !== index);
-    // Reorder remaining images
+  const handleRemoveImage = (indexToRemove: number) => {
+    const imageToRemove = images[indexToRemove];
+
+    // Limpa a URL de objeto local da memória se for uma imagem nova
+    if (imageToRemove.isNew) {
+      URL.revokeObjectURL(imageToRemove.url);
+    }
+
+    const newImages = images.filter((_, i) => i !== indexToRemove);
+
+    // Reordena as imagens restantes
     const reorderedImages = newImages.map((img, i) => ({ ...img, order: i }));
     onChange(reorderedImages);
   };
 
-  const handleReorderImages = (fromIndex: number, toIndex: number) => {
-    const newImages = [...images];
-    const [movedImage] = newImages.splice(fromIndex, 1);
-    newImages.splice(toIndex, 0, movedImage);
-    
-    // Update order property
-    const reorderedImages = newImages.map((img, i) => ({ ...img, order: i }));
-    onChange(reorderedImages);
-  };
+  // Função 'handleReorderImages' removida pois não estava implementada (sem drag-and-drop).
 
-  const uploadImage = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `pieces/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('pieces')
-      .upload(filePath, file);
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('pieces')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
-  };
-
-  const uploadAllImages = async (): Promise<ProductImage[]> => {
-    setUploading(true);
-    try {
-      const processedImages: ProductImage[] = [];
-      
-      for (const image of images) {
-        if (image.isNew && image.file) {
-          const uploadedUrl = await uploadImage(image.file);
-          processedImages.push({
-            url: uploadedUrl,
-            order: image.order
-          });
-        } else {
-          processedImages.push({
-            url: image.url,
-            order: image.order
-          });
-        }
-      }
-      
-      return processedImages;
-    } finally {
-      setUploading(false);
-    }
-  };
+  // Função 'uploadImage' (específica do Supabase) REMOVIDA.
+  // Função 'uploadAllImages' (lógica de upload) REMOVIDA.
 
   return (
     <div className="space-y-4">
@@ -132,13 +98,15 @@ const MultipleImageUpload: React.FC<MultipleImageUploadProps> = ({
         multiple
         onChange={handleFileSelect}
         className="hidden"
+        // Reseta o input para permitir selecionar o mesmo arquivo após remover
+        onClick={(e) => (e.currentTarget.value = "")}
       />
 
       {images.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {images.map((image, index) => (
             <div
-              key={index}
+              key={image.url} // Usa a URL como chave (deve ser única)
               className="relative group bg-muted rounded-lg overflow-hidden aspect-square"
             >
               <img
@@ -146,28 +114,25 @@ const MultipleImageUpload: React.FC<MultipleImageUploadProps> = ({
                 alt={`Imagem ${index + 1}`}
                 className="w-full h-full object-cover"
               />
-              
-              {/* Remove button */}
+
+              {/* Botão Remover */}
               <button
                 type="button"
                 onClick={() => handleRemoveImage(index)}
-                className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
               >
                 <X className="w-4 h-4" />
               </button>
-              
-              {/* Order indicator */}
-              <div className="absolute top-2 left-2 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+
+              {/* Indicador de Ordem */}
+              <div className="absolute top-2 left-2 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium z-10">
                 {index + 1}
               </div>
-              
-              {/* Drag handle */}
-              <div className="absolute bottom-2 right-2 bg-black/70 text-white rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
-                <GripVertical className="w-4 h-4" />
-              </div>
-              
+
+              {/* Lógica de Drag-and-drop removida por simplicidade e por não estar implementada */}
+
               {image.isNew && (
-                <div className="absolute bottom-2 left-2 bg-blue-600 text-white px-2 py-1 rounded text-xs">
+                <div className="absolute bottom-2 left-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium z-10">
                   Nova
                 </div>
               )}
@@ -187,7 +152,8 @@ const MultipleImageUpload: React.FC<MultipleImageUploadProps> = ({
 
       {images.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          {images.length} de {maxImages} imagens. Arraste para reordenar.
+          {images.length} de {maxImages} imagens.
+          {/* Texto de Reordenar removido */}
         </p>
       )}
     </div>
@@ -195,4 +161,4 @@ const MultipleImageUpload: React.FC<MultipleImageUploadProps> = ({
 };
 
 export { MultipleImageUpload };
-export default MultipleImageUpload;
+export type { ProductImage }; // Exporta o tipo para o componente pai usar

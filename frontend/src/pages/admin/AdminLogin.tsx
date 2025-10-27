@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-// CORREÇÃO: Deve importar 'useAdminContext'
 import { useAdminContext } from "@/contexts/AdminContext";
 
 // ATENÇÃO: Se o erro 'logo-admin.png' persiste, substitua por uma imagem alternativa ou remova.

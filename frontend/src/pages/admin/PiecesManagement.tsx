@@ -59,7 +59,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import MultipleImageUpload from "@/components/admin/MultipleImageUpload";
+import { MultipleImageUpload } from "@/components/admin/MultipleImageUpload.tsx";
 import { ImageFramingTool } from "@/components/admin/ImageFramingTool";
 
 const API_URL = "http://localhost:3000/api";

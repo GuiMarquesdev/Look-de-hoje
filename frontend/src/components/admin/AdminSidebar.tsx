@@ -1,42 +1,42 @@
-import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Tags, 
-  Settings, 
+import React from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Package,
+  Tags,
+  Settings,
   LogOut,
-  Image
-} from 'lucide-react';
-import logoAdmin from '@/assets/logo-admin-circular.png';
-import { Button } from '@/components/ui/button';
-import { useAdmin } from '@/contexts/AdminContext';
-import { cn } from '@/lib/utils';
+  Image,
+} from "lucide-react";
+import logoAdmin from "@/assets/logo-admin-circular.png";
+import { Button } from "@/components/ui/button";
+import { useAdmin } from "@/contexts/AdminContext.tsx";
+import { cn } from "@/lib/utils";
 
 const sidebarItems = [
   {
-    title: 'Dashboard',
-    url: '/admin/dashboard',
+    title: "Dashboard",
+    url: "/admin/dashboard",
     icon: LayoutDashboard,
   },
   {
-    title: 'Gestão de Peças',
-    url: '/admin/pieces',
+    title: "Gestão de Peças",
+    url: "/admin/pieces",
     icon: Package,
   },
   {
-    title: 'Categorias',
-    url: '/admin/categories',
+    title: "Categorias",
+    url: "/admin/categories",
     icon: Tags,
   },
   {
-    title: 'Gerenciar HeroSection',
-    url: '/admin/hero',
+    title: "Gerenciar HeroSection",
+    url: "/admin/hero",
     icon: Image,
   },
   {
-    title: 'Configurações',
-    url: '/admin/settings',
+    title: "Configurações",
+    url: "/admin/settings",
     icon: Settings,
   },
 ];
@@ -47,7 +47,7 @@ const AdminSidebar = () => {
 
   const handleLogout = () => {
     logout();
-    window.location.href = '/admin';
+    window.location.href = "/admin";
   };
 
   return (
@@ -56,9 +56,9 @@ const AdminSidebar = () => {
       <div className="p-6 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 flex items-center justify-center">
-            <img 
-              src={logoAdmin} 
-              alt="LooksdeHoje Logo" 
+            <img
+              src={logoAdmin}
+              alt="LooksdeHoje Logo"
               className="w-full h-full object-contain rounded-full"
             />
           </div>
