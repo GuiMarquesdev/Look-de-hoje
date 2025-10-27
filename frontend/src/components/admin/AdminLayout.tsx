@@ -2,13 +2,13 @@
 
 import React from "react";
 import { Outlet, Navigate } from "react-router-dom";
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
-import { useAdminContext } from "@/contexts/AdminContext"; // CORREÇÃO AQUI
+import AdminSidebar from "@/components/admin/AdminSidebar.tsx";
+import { useAdmin } from "@/contexts/AdminContext";
 import { Loader2 } from "lucide-react";
 
 const AdminLayout: React.FC = () => {
   // CORRIGIDO: O hook precisa ser importado e chamado
-  const { isAuthenticated, isLoading } = useAdminContext();
+  const { isAuthenticated, isLoading } = useAdmin();
 
   if (isLoading) {
     // Tela de carregamento enquanto o contexto verifica o token no localStorage

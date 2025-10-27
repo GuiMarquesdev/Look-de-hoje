@@ -16,7 +16,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { API_URL } from "@/config/api"; // Importando a URL da sua API
-import { useAdminContext } from "@/contexts/AdminContext"; // Assumindo este hook para pegar o token/estado
+import { useAdmin } from "@/contexts/AdminContext"; // <--- CORREÇÃO
 
 // Mapeando a estrutura do banco de dados (ajuste se o backend retornar algo diferente)
 interface StoreSettings {
@@ -79,7 +79,7 @@ const apiRequest = async (
 
 const Settings = () => {
   // ATENÇÃO: Se não tiver o useAdminContext, substitua por uma maneira de obter o token
-  const { user, token } = useAdminContext();
+  const { user, token } = useAdmin();
 
   const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);

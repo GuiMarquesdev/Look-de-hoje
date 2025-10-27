@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useAdminContext } from "@/contexts/AdminContext";
+import { useAdmin } from "@/contexts/AdminContext"; // <--- Importando useAdmin, o novo nome
 
 // ATENÇÃO: Se o erro 'logo-admin.png' persiste, substitua por uma imagem alternativa ou remova.
 // Para este exemplo, usarei uma imagem que está disponível no seu contexto (logo-dark.png)
@@ -19,7 +19,7 @@ const AdminLogin: React.FC = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   // CORREÇÃO: Chama o hook com o nome correto: useAdminContext
-  const { isAuthenticated, login } = useAdminContext();
+  const { isAuthenticated, login } = useAdmin();
   const navigate = useNavigate();
 
   // Se já estiver autenticado, redireciona para o painel

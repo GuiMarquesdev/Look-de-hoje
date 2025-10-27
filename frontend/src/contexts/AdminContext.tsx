@@ -30,12 +30,11 @@ const AdminContext = createContext<AdminContextType | undefined>(undefined);
 // HOOK PARA PEGAR O CONTEXTO
 // ------------------------------------------
 // CORREÇÃO APLICADA AQUI: Renomeado para useAdmin
-export const useAdminContext = () => {
-  // <--- O nome FINAL que deve ser usado!
+export const useAdmin = () => {
+  // <--- CORREÇÃO PRINCIPAL AQUI
   const context = useContext(AdminContext);
   if (context === undefined) {
-    // Atualize a mensagem de erro para refletir o novo nome
-    throw new Error("useAdminContext must be used within an AdminProvider");
+    throw new Error("useAdmin must be used within an AdminProvider");
   }
   return context;
 };
