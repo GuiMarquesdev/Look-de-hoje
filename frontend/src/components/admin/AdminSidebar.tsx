@@ -1,3 +1,5 @@
+// frontend/src/components/admin/AdminSidebar.tsx
+
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -10,10 +12,11 @@ import {
 } from "lucide-react";
 import logoAdmin from "@/assets/logo-admin-circular.png";
 import { Button } from "@/components/ui/button";
-import { useAdmin } from "@/contexts/AdminContext.tsx";
+// import { useAdmin } from "@/contexts/AdminContext.tsx"; // REMOVIDO
 import { cn } from "@/lib/utils";
 
 const sidebarItems = [
+  // ... (sidebarItems mantidos)
   {
     title: "Dashboard",
     url: "/admin/dashboard",
@@ -42,12 +45,11 @@ const sidebarItems = [
 ];
 
 const AdminSidebar = () => {
-  const { logout } = useAdmin();
   const location = useLocation();
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = "/admin";
+  const handleHome = () => {
+    // Redireciona para a página principal da loja
+    window.location.href = "/";
   };
 
   return (
@@ -95,15 +97,15 @@ const AdminSidebar = () => {
         })}
       </nav>
 
-      {/* Logout */}
+      {/* Botão de "Sair" transformado em "Voltar para Loja" */}
       <div className="sticky bottom-0 p-4 border-t border-border bg-card">
         <Button
-          onClick={handleLogout}
+          onClick={handleHome}
           variant="ghost"
-          className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive font-montserrat"
+          className="w-full justify-start gap-3 text-muted-foreground hover:text-primary font-montserrat"
         >
           <LogOut className="w-4 h-4" />
-          Sair
+          Voltar para a Loja
         </Button>
       </div>
     </div>

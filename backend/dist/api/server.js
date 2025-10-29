@@ -7,12 +7,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const client_1 = require("@prisma/client");
-// Caminho CORRETO: Sobe um nível (para src), entra em factories
 const PrismaRepositoryFactory_1 = require("../factories/PrismaRepositoryFactory");
-// Caminho CORRETO: Mesma pasta (api), entra em routes
 const admin_route_1 = require("./routes/admin.route");
 const pieces_route_1 = require("./routes/pieces.route");
 const hero_route_1 = require("./routes/hero.route");
+const categories_route_1 = require("./routes/categories.route");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
 const prisma = new client_1.PrismaClient();
@@ -22,9 +21,11 @@ app.use(express_1.default.json());
 const adminRouter = (0, admin_route_1.createAdminRoutes)(repositoryFactory);
 const piecesRouter = (0, pieces_route_1.createPiecesRoutes)(repositoryFactory);
 const heroRouter = (0, hero_route_1.createHeroRouter)(repositoryFactory);
+const categoryRouter = (0, categories_route_1.createCategoryRoutes)(repositoryFactory); // INICIALIZAÇÃO
 app.use("/api/admin", adminRouter);
 app.use("/api/pieces", piecesRouter);
 app.use("/api/hero", heroRouter);
+app.use("/api/categories", categoryRouter); // CONEXÃO DA ROTA
 app.get("/api", (req, res) => {
     res.json({ message: "API Look de Hoje está online!" });
 });

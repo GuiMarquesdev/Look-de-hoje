@@ -3,12 +3,11 @@
 import express from "express";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
-// Caminho CORRETO: Sobe um nível (para src), entra em factories
 import { PrismaRepositoryFactory } from "../factories/PrismaRepositoryFactory";
-// Caminho CORRETO: Mesma pasta (api), entra em routes
 import { createAdminRoutes } from "./routes/admin.route";
 import { createPiecesRoutes } from "./routes/pieces.route";
 import { createHeroRouter } from "./routes/hero.route";
+import { createCategoryRoutes } from "./routes/categories.route";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,10 +21,12 @@ app.use(express.json());
 const adminRouter = createAdminRoutes(repositoryFactory);
 const piecesRouter = createPiecesRoutes(repositoryFactory);
 const heroRouter = createHeroRouter(repositoryFactory);
+const categoryRouter = createCategoryRoutes(repositoryFactory); // INICIALIZAÇÃO
 
 app.use("/api/admin", adminRouter);
 app.use("/api/pieces", piecesRouter);
 app.use("/api/hero", heroRouter);
+app.use("/api/categories", categoryRouter); // CONEXÃO DA ROTA
 
 app.get("/api", (req, res) => {
   res.json({ message: "API Look de Hoje está online!" });

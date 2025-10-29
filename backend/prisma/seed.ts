@@ -1,6 +1,5 @@
 // backend/prisma/seed.ts
 import { PrismaClient } from "@prisma/client";
-import * as bcrypt from "bcrypt";
 import * as dotenv from "dotenv";
 
 // Carrega as variáveis de ambiente (necessário para ADMIN_EMAIL, se definido)
@@ -16,13 +15,6 @@ const PLAIN_TEXT_PASSWORD = "admin123";
 
 async function main() {
   console.log(`Iniciando o seeding...`);
-
-  // 1. Gera o hash para a senha de administrador (usando 10 rounds para segurança)
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash(PLAIN_TEXT_PASSWORD, saltRounds);
-  console.log(
-    `Hash da senha de admin gerado. Senha original: ${PLAIN_TEXT_PASSWORD}`
-  );
 
   // Opcional: Criar uma categoria inicial
   const category1 = await prisma.category.upsert({

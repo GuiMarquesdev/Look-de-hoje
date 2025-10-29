@@ -7,43 +7,33 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-// A importação do supabase FOI REMOVIDA
-// import { supabase } from '@/integrations/supabase/client';
 import {
   Settings as SettingsIcon,
   Shield,
   Store,
   Link as LinkIcon,
 } from "lucide-react";
-import { API_URL } from "@/config/api"; // Importando a URL da sua API
-import { useAdmin } from "@/contexts/AdminContext"; // <--- CORREÇÃO
+import { API_URL } from "@/config/api";
 
-// Mapeando a estrutura do banco de dados (ajuste se o backend retornar algo diferente)
+// Mapeando a estrutura do banco de dados
 interface StoreSettings {
   id: string;
   store_name: string;
   instagram_url?: string;
   whatsapp_url?: string;
   email?: string;
-  // A senha do admin não deve ser retornada no fetch de settings, mas o tipo
-  // é mantido aqui para alinhamento com o estado local.
-  admin_password: string;
 }
 
 // ------------------------------------------
-// Funções Utilitárias para API (simulando um cliente HTTP)
+// Funções Utilitárias para API (SIMPLIFICADAS)
 // ------------------------------------------
-
-// Função auxiliar para fazer requisições à API com autenticação
-const apiRequest = async (
+const directApiRequest = async (
   path: string,
   method: "GET" | "PUT",
-  token: string,
   body?: any
 ) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
   };
 
   const config: RequestInit = {
@@ -60,13 +50,11 @@ const apiRequest = async (
       const errorJson = await response.json();
       errorDetail = errorJson.message || errorDetail;
     } catch {
-      // Ignora se não for JSON
       errorDetail = response.statusText || errorDetail;
     }
     throw new Error(errorDetail);
   }
 
-  // Não tenta fazer .json() se for 204 No Content (ex: PUT/UPDATE)
   if (
     response.status === 204 ||
     response.headers.get("content-length") === "0"
@@ -78,8 +66,7 @@ const apiRequest = async (
 };
 
 const Settings = () => {
-  // ATENÇÃO: Se não tiver o useAdminContext, substitua por uma maneira de obter o token
-  const { user, token } = useAdmin();
+  // useAdmin REMOVIDO
 
   const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,41 +76,32 @@ const Settings = () => {
     instagram_url: "",
     whatsapp_url: "",
     email: "",
-    current_password: "",
-    new_password: "",
-    confirm_password: "",
+    // Campos de senha REMOVIDOS
   });
 
   useEffect(() => {
-    if (token) {
-      fetchSettings();
-    }
-  }, [token]);
+    fetchSettings();
+  }, []); // Dependência [token] REMOVIDA
 
   // ------------------------------------------
   // LÓGICA DE BUSCA DE DADOS (GET)
-  // Endpoint Sugerido: [API_URL]/settings
   // ------------------------------------------
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      // Fazendo a chamada GET para buscar as configurações da loja
-      const data = await apiRequest("/settings", "GET", token);
+      // Chamada direta, sem token
+      const data = await directApiRequest("/admin/settings", "GET");
 
       if (!data) {
         throw new Error("Dados de configurações não encontrados.");
       }
 
-      // Assumindo que o backend retorna um objeto StoreSettings
       setSettings(data);
       setFormData({
         store_name: data.store_name || "",
         instagram_url: data.instagram_url || "",
         whatsapp_url: data.whatsapp_url || "",
         email: data.email || "",
-        current_password: "",
-        new_password: "",
-        confirm_password: "",
       });
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -141,7 +119,6 @@ const Settings = () => {
 
   // ------------------------------------------
   // LÓGICA DE ATUALIZAÇÃO DE INFO DA LOJA (PUT)
-  // Endpoint Sugerido: [API_URL]/settings
   // ------------------------------------------
   const saveStoreInfo = async () => {
     if (!settings) return;
@@ -153,14 +130,13 @@ const Settings = () => {
         instagram_url: formData.instagram_url,
         whatsapp_url: formData.whatsapp_url,
         email: formData.email,
-        // Não envie a senha, pois esta função é apenas para info da loja
       };
 
-      // Fazendo a chamada PUT para atualizar as informações da loja
-      await apiRequest("/settings", "PUT", token, updatePayload);
+      // Chamada PUT sem token
+      await directApiRequest("/admin/settings", "PUT", updatePayload);
 
       toast.success("Informações da loja atualizadas com sucesso!");
-      fetchSettings(); // Recarrega os dados após a atualização
+      fetchSettings();
     } catch (error) {
       console.error("Error updating store info:", error);
       toast.error(
@@ -172,63 +148,16 @@ const Settings = () => {
   };
 
   // ------------------------------------------
-  // LÓGICA DE ALTERAÇÃO DE SENHA (PUT)
-  // Endpoint Sugerido: [API_URL]/admin/password (mais seguro)
+  // LÓGICA DE ALTERAÇÃO DE SENHA (SIMPLIFICADA/INATIVA)
   // ------------------------------------------
   const changePassword = async () => {
-    if (!settings) return;
-
-    if (
-      !formData.current_password ||
-      !formData.new_password ||
-      !formData.confirm_password
-    ) {
-      toast.error("Preencha todos os campos de senha");
-      return;
-    }
-
-    if (formData.new_password !== formData.confirm_password) {
-      toast.error("Nova senha e confirmação não coincidem");
-      return;
-    }
-
-    if (formData.new_password.length < 6) {
-      toast.error("Nova senha deve ter pelo menos 6 caracteres");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const passwordPayload = {
-        current_password: formData.current_password,
-        new_password: formData.new_password,
-      };
-
-      // Fazendo a chamada PUT para alterar a senha
-      // Nota: Este endpoint DEVE ser protegido por JWT no backend e usar bcrypt para verificar
-      // a senha atual e hashear a nova.
-      await apiRequest("/admin/password", "PUT", token, passwordPayload);
-
-      toast.success("Senha alterada com sucesso!");
-      // Limpa os campos de senha após o sucesso
-      setFormData((prev) => ({
-        ...prev,
-        current_password: "",
-        new_password: "",
-        confirm_password: "",
-      }));
-      // Não é necessário recarregar settings, pois a senha não é exposta
-    } catch (error) {
-      console.error("Error updating password:", error);
-      toast.error(`Erro ao alterar senha: ${(error as Error).message}`);
-    } finally {
-      setSaving(false);
-    }
+    toast.info(
+      "A alteração de senha foi desabilitada, pois o login foi removido."
+    );
   };
 
-  // O restante do componente de visualização permanece o mesmo.
-  if (loading || !token) {
-    // Adicionado verificação de token
+  if (loading) {
+    // ... (Estado de carregamento)
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-6">
@@ -244,18 +173,17 @@ const Settings = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* ... (cabeçalho, Store Information, Security Settings, Current Configuration - Sem alterações) */}
       <div>
         <h1 className="text-3xl font-playfair font-bold text-foreground">
           Configurações
         </h1>
         <p className="text-muted-foreground font-montserrat">
-          Gerencie as configurações da loja e sua conta
+          Gerencie as configurações da loja (Acesso Direto)
         </p>
       </div>
 
       <div className="grid gap-6 max-w-2xl">
-        {/* Store Information */}
+        {/* Store Information (Mantido) */}
         <Card className="luxury-card">
           <CardHeader>
             <CardTitle className="font-playfair flex items-center gap-2">
@@ -264,6 +192,7 @@ const Settings = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* ... Campos de formulário ... */}
             <div className="space-y-2">
               <Label htmlFor="store_name" className="font-montserrat">
                 Nome da Loja
@@ -344,63 +273,19 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* Security Settings */}
+        {/* Security Settings (Simplificado e Inativo) */}
         <Card className="luxury-card">
           <CardHeader>
             <CardTitle className="font-playfair flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
-              Segurança
+              <Shield className="w-5 h-5 text-muted-foreground" />
+              Segurança (Desabilitado)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="current_password" className="font-montserrat">
-                Senha Atual
-              </Label>
-              <Input
-                id="current_password"
-                type="password"
-                value={formData.current_password}
-                onChange={(e) =>
-                  handleInputChange("current_password", e.target.value)
-                }
-                placeholder="Digite sua senha atual"
-                className="font-montserrat"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="new_password" className="font-montserrat">
-                Nova Senha
-              </Label>
-              <Input
-                id="new_password"
-                type="password"
-                value={formData.new_password}
-                onChange={(e) =>
-                  handleInputChange("new_password", e.target.value)
-                }
-                placeholder="Digite a nova senha"
-                className="font-montserrat"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirm_password" className="font-montserrat">
-                Confirmar Nova Senha
-              </Label>
-              <Input
-                id="confirm_password"
-                type="password"
-                value={formData.confirm_password}
-                onChange={(e) =>
-                  handleInputChange("confirm_password", e.target.value)
-                }
-                placeholder="Confirme a nova senha"
-                className="font-montserrat"
-              />
-            </div>
-
+            <p className="text-sm text-muted-foreground font-montserrat">
+              A autenticação por login e senha foi removida do projeto para
+              simplificar a arquitetura. Esta seção não é mais funcional.
+            </p>
             <div className="flex justify-end">
               <Button
                 onClick={changePassword}
@@ -408,29 +293,31 @@ const Settings = () => {
                 variant="outline"
                 className="font-montserrat"
               >
-                {saving ? "Alterando..." : "Alterar Senha"}
+                Simular Alteração de Senha
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Current Configuration */}
+        {/* Current Configuration (Alerta de Segurança) */}
         <Card className="luxury-card border-muted">
           <CardHeader>
             <CardTitle className="font-playfair flex items-center gap-2">
               <SettingsIcon className="w-5 h-5 text-muted-foreground" />
-              Configuração Atual
+              Atenção
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground font-montserrat space-y-2">
-            <p>
-              <strong>Senha padrão:</strong> admin123
+            <p className="text-red-600">
+              ⚠️ Este painel agora tem **acesso direto** e não requer login.
+              Qualquer pessoa que saiba a URL `/admin` pode acessá-lo e alterar
+              as configurações.
             </p>
             <p>
-              <strong>Usuário padrão:</strong> admin
-            </p>
-            <p className="text-amber-600">
-              ⚠️ Recomendamos alterar a senha padrão por segurança
+              **Recomendação:** Se for para produção, adicione uma camada de
+              segurança (como autenticação HTTP básica ou IP Whitelisting) no
+              seu servidor (como Nginx ou Vercel/Cloudflare) para proteger as
+              rotas `/api/admin/*`.
             </p>
           </CardContent>
         </Card>

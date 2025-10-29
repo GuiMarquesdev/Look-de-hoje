@@ -52,6 +52,11 @@ model StoreSetting {
   @@map("store_settings")
 }
 
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+}
+
 model AdminCredentials {
   id              String   @id @default(dbgenerated("'admin_credentials'")) @db.VarChar(50)
   admin_password  String   @db.VarChar(255) // Apenas o hash da senha

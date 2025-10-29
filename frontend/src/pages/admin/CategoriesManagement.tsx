@@ -1,3 +1,5 @@
+// src/pages/admin/CategoriesManagement.tsx
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +29,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch"; // 🚨 NOVO: Importar Switch
 import {
+  // Componentes do dropdown
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -41,11 +45,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-const API_URL = "http://localhost:3000/api"; // Você pode usar o caminho real ou a constante
+const API_URL = "http://localhost:3000/api";
 
 interface Category {
   id: string;
   name: string;
+  is_active: boolean; // 🚨 CORREÇÃO: Adicionar is_active
   piece_count?: number;
   created_at: string;
   updated_at: string;
@@ -53,6 +58,7 @@ interface Category {
 
 const categorySchema = z.object({
   name: z.string().min(1, "Nome da categoria é obrigatório"),
+  is_active: z.boolean().default(true), // 🚨 CORREÇÃO: Novo campo
 });
 
 const CategoriesManagement = () => {
@@ -66,6 +72,7 @@ const CategoriesManagement = () => {
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
+      is_active: true, // 🚨 CORREÇÃO: Valor padrão
     },
   });
 
@@ -80,23 +87,10 @@ const CategoriesManagement = () => {
 
       const categories: Category[] = await response.json();
 
-      // Count pieces for each category
-      const categoriesWithCount = await Promise.all(
-        categories.map(async (category) => {
-          // Chamada simulada para contar peças. Você deve implementar o endpoint: GET /api/pieces/count?category_id=ID
-          // Por enquanto, vamos mockar ou assumir que o backend enviou a contagem se for eficiente.
-          // Se o backend tiver sido implementado para incluir o count:
-          // return category;
-
-          // Se for necessário chamar o backend para contar:
-          // const countResponse = await fetch(`${API_URL}/categories/${category.id}/count-pieces`);
-          // const { count } = await countResponse.json();
-          // return { ...category, piece_count: count || 0 };
-
-          // Para fins de migração, manteremos o mock/assumido
-          return { ...category, piece_count: category.piece_count ?? 0 };
-        })
-      );
+      const categoriesWithCount: Category[] = categories.map((category) => ({
+        ...category,
+        piece_count: category.piece_count ?? 0, // Assumindo que o count virá do backend
+      }));
 
       setCategories(categoriesWithCount);
     } catch (error) {
@@ -114,20 +108,34 @@ const CategoriesManagement = () => {
       : `${API_URL}/categories`;
 
     try {
+      // 🚨 CORREÇÃO CRÍTICA: Envia o payload completo
+      const payload = {
+        name: values.name,
+        is_active: values.is_active,
+        // O slug será gerado no backend a partir do name
+      };
+
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: values.name }), // Envia apenas o nome
+        body: JSON.stringify(payload), // ENVIANDO is_active
       });
 
-      // A API deve retornar 200/201 em caso de sucesso
       if (response.status === 409) {
-        // Assumindo 409 para conflito (UNIQUE constraint violation)
         toast.error("Já existe uma categoria com este nome");
         return;
       }
 
-      if (!response.ok) throw new Error("Erro ao salvar categoria");
+      if (!response.ok) {
+        let errorMessage = "Erro ao salvar categoria";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Não é JSON
+        }
+        throw new Error(errorMessage);
+      }
 
       toast.success(
         `Categoria ${editingCategory ? "atualizada" : "criada"} com sucesso!`
@@ -139,26 +147,22 @@ const CategoriesManagement = () => {
       fetchCategories();
     } catch (error: any) {
       console.error("Error saving category:", error);
-      // Aqui, o código de erro 23505 (UNIQUE violation do Postgres) foi mapeado para 409 no backend
-      toast.error("Erro ao salvar categoria");
+      toast.error(error.message || "Erro ao salvar categoria");
     }
   };
 
   const deleteCategory = async (category: Category) => {
     try {
-      // 3. REGRA DE NEGÓCIO: Verificar se há peças (idealmente, a API deveria retornar 400)
       if (category.piece_count && category.piece_count > 0) {
         toast.error("Não é possível excluir categoria que possui peças");
         return;
       }
 
-      // 4. CHAMA O NOVO ENDPOINT DE DELEÇÃO
       const response = await fetch(`${API_URL}/categories/${category.id}`, {
         method: "DELETE",
       });
 
       if (response.status === 400) {
-        // Se a API retornar erro por haver peças
         toast.error("Não é possível excluir categoria que possui peças");
         return;
       }
@@ -175,13 +179,13 @@ const CategoriesManagement = () => {
 
   const openEditDialog = (category: Category) => {
     setEditingCategory(category);
-    form.reset({ name: category.name });
+    form.reset({ name: category.name, is_active: category.is_active }); // 🚨 CORREÇÃO: Incluir is_active
     setIsDialogOpen(true);
   };
 
   const openAddDialog = () => {
     setEditingCategory(null);
-    form.reset({ name: "" });
+    form.reset({ name: "", is_active: true }); // 🚨 CORREÇÃO: Incluir is_active
     setIsDialogOpen(true);
   };
 
@@ -228,7 +232,7 @@ const CategoriesManagement = () => {
               </DialogTitle>
               <DialogDescription className="font-montserrat">
                 {editingCategory
-                  ? "Atualize o nome da categoria."
+                  ? "Atualize o nome e status da categoria."
                   : "Crie uma nova categoria para organizar suas peças."}
               </DialogDescription>
             </DialogHeader>
@@ -253,6 +257,31 @@ const CategoriesManagement = () => {
                         />
                       </FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {/* 🚨 NOVO CAMPO: is_active (usando o componente Switch) */}
+                <FormField
+                  control={form.control}
+                  name="is_active"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base font-montserrat">
+                          Status
+                        </FormLabel>
+                        <DialogDescription className="font-montserrat">
+                          {field.value
+                            ? "Categoria ativa e visível na loja."
+                            : "Categoria inativa e oculta na loja."}
+                        </DialogDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
@@ -299,6 +328,7 @@ const CategoriesManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="font-montserrat">Nome</TableHead>
+                <TableHead className="font-montserrat">Status</TableHead>
                 <TableHead className="font-montserrat">
                   Quantidade de Peças
                 </TableHead>
@@ -312,6 +342,14 @@ const CategoriesManagement = () => {
                 <TableRow key={category.id}>
                   <TableCell className="font-medium font-montserrat">
                     {category.name}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={category.is_active ? "default" : "secondary"}
+                      className="font-montserrat"
+                    >
+                      {category.is_active ? "Ativa" : "Inativa"}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="font-montserrat">
@@ -353,7 +391,7 @@ const CategoriesManagement = () => {
               {filteredCategories.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={3}
+                    colSpan={4}
                     className="text-center py-8 text-muted-foreground font-montserrat"
                   >
                     Nenhuma categoria encontrada

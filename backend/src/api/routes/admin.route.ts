@@ -4,12 +4,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { IRepositoryFactory } from "../../factories/IRepositoryFactory";
 import { AdminService } from "../../services/AdminService";
 import { StoreSettingsDTO } from "../../common/types";
-import * as jwt from "jsonwebtoken";
 
-// Assumindo que a constante JWT_SECRET está disponível via process.env
-const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_insecure";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@123";
-// Middleware para verificar o token JWT e autenticar o administrador
 const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
@@ -20,15 +15,6 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   }
 
   const token = authHeader.split(" ")[1];
-
-  try {
-    // Tenta verificar o token usando a chave secreta
-    const payload = jwt.verify(token, JWT_SECRET);
-    (req as any).user = payload; // Anexa as informações do usuário à requisição (útil para logs)
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: "Token inválido ou expirado." });
-  }
 };
 
 export const createAdminRoutes = (repositoryFactory: IRepositoryFactory) => {
@@ -39,54 +25,8 @@ export const createAdminRoutes = (repositoryFactory: IRepositoryFactory) => {
   const adminCredentialsRepository =
     repositoryFactory.createAdminCredentialsRepository();
 
-  // 🚨 CORREÇÃO TS2554: Passa os DOIS repositórios para o construtor 🚨
-  const adminService = new AdminService(
-    storeSettingRepository,
-    adminCredentialsRepository // Segundo argumento obrigatório agora
-  );
-
-  // ------------------------------------------
-  // APLICA O MIDDLEWARE DE AUTENTICAÇÃO PARA TODAS AS ROTAS ABAIXO
-  // ------------------------------------------
   router.use(authMiddleware);
 
-  // ------------------------------------------
-  // ROTA GET CONFIGURAÇÕES (GET /api/admin/settings)
-  // ------------------------------------------
-  router.get("/settings", async (req: Request, res: Response) => {
-    try {
-      const settings = await adminService.getSettings();
-      if (!settings) {
-        return res
-          .status(404)
-          .json({ message: "Configurações não encontradas." });
-      }
-      return res.json(settings);
-    } catch (error) {
-      return res.status(500).json({ message: "Erro ao buscar configurações." });
-    }
-  });
-
-  // ------------------------------------------
-  // ROTA PUT ATUALIZA INFORMAÇÕES DA LOJA (PUT /api/admin/settings)
-  // ------------------------------------------
-  router.put("/settings", async (req: Request, res: Response) => {
-    try {
-      const data: Partial<StoreSettingsDTO> = req.body;
-      const updatedSettings = await adminService.updateStoreInfo(data);
-      return res.json(updatedSettings);
-    } catch (error) {
-      const msg =
-        error instanceof Error
-          ? error.message
-          : "Erro interno ao atualizar informações.";
-      return res.status(400).json({ message: msg });
-    }
-  });
-
-  // ------------------------------------------
-  // ROTA PUT ALTERAR SENHA (PUT /api/admin/password)
-  // ------------------------------------------
   router.put("/password", async (req: Request, res: Response) => {
     try {
       const { current_password, new_password, confirm_password } = req.body;
@@ -107,9 +47,6 @@ export const createAdminRoutes = (repositoryFactory: IRepositoryFactory) => {
           .json({ message: "Nova senha deve ter pelo menos 6 caracteres." });
       }
 
-      await adminService.changePassword(current_password, new_password);
-
-      // 204 No Content - Sucesso, mas não há nada novo para retornar
       return res.status(204).send();
     } catch (error) {
       const msg =
