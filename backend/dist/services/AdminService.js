@@ -42,7 +42,7 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const jwt = __importStar(require("jsonwebtoken"));
 // O JWT_SECRET DEVE vir de uma variável de ambiente (backend/.env)
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_insecure";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@exemplo.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@exemplo";
 class AdminService {
     constructor(storeSettingRepository) {
         this.storeSettingRepository = storeSettingRepository;

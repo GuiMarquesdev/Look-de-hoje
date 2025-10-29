@@ -8,7 +8,7 @@ import * as jwt from "jsonwebtoken";
 
 // Assumindo que a constante JWT_SECRET está disponível via process.env
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_insecure";
-
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@123";
 // Middleware para verificar o token JWT e autenticar o administrador
 const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;

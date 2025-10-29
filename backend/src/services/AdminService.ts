@@ -9,7 +9,7 @@ import { StoreSettingsDTO } from "../common/types";
 
 // O JWT_SECRET DEVE vir de uma variável de ambiente (backend/.env)
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_insecure";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@exemplo.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@123";
 
 export class AdminService implements IAdminService {
   constructor(private storeSettingRepository: IStoreSettingRepository) {}
