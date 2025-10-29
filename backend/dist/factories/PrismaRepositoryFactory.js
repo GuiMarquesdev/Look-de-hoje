@@ -5,8 +5,8 @@ exports.PrismaRepositoryFactory = void 0;
 const PrismaPieceRepository_1 = require("../repositories/PrismaPieceRepository");
 const PrismaCategoryRepository_1 = require("../repositories/PrismaCategoryRepository");
 const PrismaStoreSettingRepository_1 = require("../repositories/PrismaStoreSettingRepository");
-// IMPORTAÇÃO CORRETA
 const PrismaHeroSettingRepository_1 = require("../repositories/PrismaHeroSettingRepository");
+const PrismaAdminCredentialsRepository_1 = require("../repositories/PrismaAdminCredentialsRepository");
 class PrismaRepositoryFactory {
     constructor(prisma) {
         this.prisma = prisma;
@@ -20,9 +20,11 @@ class PrismaRepositoryFactory {
     createStoreSettingRepository() {
         return new PrismaStoreSettingRepository_1.PrismaStoreSettingRepository(this.prisma);
     }
-    // USO CORRETO
     createHeroSettingRepository() {
         return new PrismaHeroSettingRepository_1.PrismaHeroSettingRepository(this.prisma);
+    }
+    createAdminCredentialsRepository() {
+        return new PrismaAdminCredentialsRepository_1.PrismaAdminCredentialsRepository(this.prisma);
     }
 }
 exports.PrismaRepositoryFactory = PrismaRepositoryFactory;

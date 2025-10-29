@@ -35,31 +35,15 @@ export const createAdminRoutes = (repositoryFactory: IRepositoryFactory) => {
   const router = Router();
   const storeSettingRepository =
     repositoryFactory.createStoreSettingRepository();
-  const adminService = new AdminService(storeSettingRepository);
 
-  // ------------------------------------------
-  // ROTA DE LOGIN (POST /api/admin/login) - NÃO Protegida
-  // ------------------------------------------
-  router.post("/login", async (req: Request, res: Response) => {
-    try {
-      const { email, password } = req.body;
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ message: "Email e senha são obrigatórios." });
-      }
+  const adminCredentialsRepository =
+    repositoryFactory.createAdminCredentialsRepository();
 
-      const result = await adminService.login(email, password);
-      // Retorna o token e os dados do usuário para o frontend
-      return res.json(result);
-    } catch (error) {
-      const msg =
-        error instanceof Error
-          ? error.message
-          : "Erro interno ao tentar fazer login.";
-      return res.status(401).json({ message: msg });
-    }
-  });
+  // 🚨 CORREÇÃO TS2554: Passa os DOIS repositórios para o construtor 🚨
+  const adminService = new AdminService(
+    storeSettingRepository,
+    adminCredentialsRepository // Segundo argumento obrigatório agora
+  );
 
   // ------------------------------------------
   // APLICA O MIDDLEWARE DE AUTENTICAÇÃO PARA TODAS AS ROTAS ABAIXO

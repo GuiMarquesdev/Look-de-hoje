@@ -40,6 +40,7 @@ const AdminService_1 = require("../../services/AdminService");
 const jwt = __importStar(require("jsonwebtoken"));
 // Assumindo que a constante JWT_SECRET está disponível via process.env
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_insecure";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@123";
 // Middleware para verificar o token JWT e autenticar o administrador
 const authMiddleware = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -62,29 +63,10 @@ const authMiddleware = (req, res, next) => {
 const createAdminRoutes = (repositoryFactory) => {
     const router = (0, express_1.Router)();
     const storeSettingRepository = repositoryFactory.createStoreSettingRepository();
-    const adminService = new AdminService_1.AdminService(storeSettingRepository);
-    // ------------------------------------------
-    // ROTA DE LOGIN (POST /api/admin/login) - NÃO Protegida
-    // ------------------------------------------
-    router.post("/login", async (req, res) => {
-        try {
-            const { email, password } = req.body;
-            if (!email || !password) {
-                return res
-                    .status(400)
-                    .json({ message: "Email e senha são obrigatórios." });
-            }
-            const result = await adminService.login(email, password);
-            // Retorna o token e os dados do usuário para o frontend
-            return res.json(result);
-        }
-        catch (error) {
-            const msg = error instanceof Error
-                ? error.message
-                : "Erro interno ao tentar fazer login.";
-            return res.status(401).json({ message: msg });
-        }
-    });
+    const adminCredentialsRepository = repositoryFactory.createAdminCredentialsRepository();
+    // 🚨 CORREÇÃO TS2554: Passa os DOIS repositórios para o construtor 🚨
+    const adminService = new AdminService_1.AdminService(storeSettingRepository, adminCredentialsRepository // Segundo argumento obrigatório agora
+    );
     // ------------------------------------------
     // APLICA O MIDDLEWARE DE AUTENTICAÇÃO PARA TODAS AS ROTAS ABAIXO
     // ------------------------------------------

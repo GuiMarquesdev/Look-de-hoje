@@ -5,12 +5,12 @@ import { IRepositoryFactory } from "./IRepositoryFactory";
 import { PrismaPieceRepository } from "../repositories/PrismaPieceRepository";
 import { PrismaCategoryRepository } from "../repositories/PrismaCategoryRepository";
 import { PrismaStoreSettingRepository } from "../repositories/PrismaStoreSettingRepository";
-// IMPORTAÇÃO CORRETA
 import { PrismaHeroSettingRepository } from "../repositories/PrismaHeroSettingRepository";
 import { IPieceRepository } from "../interfaces/IPieceRepository";
 import { ICategoryRepository } from "../interfaces/ICategoryRepository";
 import { IStoreSettingRepository } from "../interfaces/IStoreSettingRepository";
 import { IHeroSettingRepository } from "../interfaces/IHeroSettingRepository";
+import { PrismaAdminCredentialsRepository } from "../repositories/PrismaAdminCredentialsRepository";
 
 export class PrismaRepositoryFactory implements IRepositoryFactory {
   constructor(private prisma: PrismaClient) {}
@@ -27,8 +27,11 @@ export class PrismaRepositoryFactory implements IRepositoryFactory {
     return new PrismaStoreSettingRepository(this.prisma);
   }
 
-  // USO CORRETO
   createHeroSettingRepository(): IHeroSettingRepository {
     return new PrismaHeroSettingRepository(this.prisma);
+  }
+
+  createAdminCredentialsRepository() {
+    return new PrismaAdminCredentialsRepository(this.prisma);
   }
 }

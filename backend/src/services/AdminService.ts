@@ -5,16 +5,22 @@ import * as jwt from "jsonwebtoken";
 import { StoreSetting } from "@prisma/client";
 import { IAdminService } from "../interfaces/IAdminService";
 import { IStoreSettingRepository } from "../interfaces/IStoreSettingRepository";
+// 🚨 NOVO: Interface para o Repositório de Credenciais
+import { IAdminCredentialsRepository } from "../interfaces/IAdminCredentialsRepository";
 import { StoreSettingsDTO } from "../common/types";
 
-// O JWT_SECRET DEVE vir de uma variável de ambiente (backend/.env)
+// As variáveis de ambiente devem ser carregadas via dotenv no ponto de entrada
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_insecure";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@123";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@exemplo.com";
 
 export class AdminService implements IAdminService {
-  constructor(private storeSettingRepository: IStoreSettingRepository) {}
+  constructor(
+    private storeSettingRepository: IStoreSettingRepository,
+    // 🚨 NOVO: Injeção do Repositório de Credenciais
+    private adminCredentialsRepository: IAdminCredentialsRepository
+  ) {}
 
-  // 1. Implementação do Login
+  // 1. Implementação do Login (AGORA UTILIZA AS DUAS TABELAS)
   async login(
     email: string,
     password: string
@@ -22,73 +28,78 @@ export class AdminService implements IAdminService {
     token: string;
     user: { id: string; email: string; store_name: string };
   }> {
+    // Busca as credenciais e as configurações da loja
+    const credentials = await this.adminCredentialsRepository.getCredentials();
     const settings = await this.storeSettingRepository.getSettings();
 
-    if (!settings || email !== ADMIN_EMAIL) {
+    // 1. Verifica se ambos os registros iniciais existem
+    if (!credentials || !settings) {
       throw new Error("Credenciais inválidas.");
     }
 
-    // Compara a senha (plain text) com o hash armazenado
+    // 2. Verifica o e-mail
+    if (email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+      throw new Error("Credenciais inválidas.");
+    }
+
+    // 3. Compara a senha (plain text) com o hash da nova tabela de credenciais
     const passwordMatch = await bcrypt.compare(
       password,
-      settings.admin_password
+      credentials.admin_password // Lendo da nova tabela AdminCredentials
     );
 
     if (!passwordMatch) {
       throw new Error("Credenciais inválidas.");
     }
 
-    // CORREÇÃO: Garante que store_name seja uma string, usando '' se for null.
+    // Geração do token JWT
     const payload = {
-      id: settings.id,
+      id: credentials.id,
       email: ADMIN_EMAIL,
-      store_name: settings.store_name ?? "", // Usa string vazia se settings.store_name for null
+      store_name: settings.store_name ?? "",
     };
 
-    // Gera o token JWT
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "1d" });
 
-    // O tipo de retorno agora está correto, pois payload.store_name é garantidamente string
     return { token, user: payload };
   }
 
-  // 2. Implementação do GET Settings
+  // 2. Implementação do GET Settings (CORRIGIDO: Apenas StoreSetting)
   async getSettings(): Promise<Partial<StoreSetting> | null> {
     const settings = await this.storeSettingRepository.getSettings();
     if (settings) {
-      // Remove a senha antes de enviar ao frontend!
-      const { admin_password, ...safeSettings } = settings;
-      return safeSettings;
+      // 🚨 Atenção: Não precisamos remover admin_password, pois ele foi removido do modelo StoreSetting 🚨
+      // Retornamos todas as colunas de StoreSetting
+      return settings;
     }
     return null;
   }
 
-  // 3. Implementação do Update Store Info
+  // 3. Implementação do Update Store Info (CORRIGIDO: Apenas StoreSetting)
   async updateStoreInfo(
     data: Partial<StoreSettingsDTO>
   ): Promise<StoreSetting> {
     if (!data.store_name) {
       throw new Error("O nome da loja é obrigatório.");
     }
-    // Certifique-se de que o método no repositório também retorna StoreSetting
     return this.storeSettingRepository.updateStoreInfo(data);
   }
 
-  // 4. Implementação do Change Password
+  // 4. Implementação do Change Password (CORRIGIDO: Usa AdminCredentialsRepository)
   async changePassword(
     currentPassword: string,
     newPassword: string
   ): Promise<void> {
-    const settings = await this.storeSettingRepository.getSettings();
+    const credentials = await this.adminCredentialsRepository.getCredentials();
 
-    if (!settings) {
-      throw new Error("Configurações não encontradas.");
+    if (!credentials) {
+      throw new Error("Configurações de administrador não encontradas.");
     }
 
     // Verifica a senha atual
     const isCurrentPasswordValid = await bcrypt.compare(
       currentPassword,
-      settings.admin_password
+      credentials.admin_password
     );
     if (!isCurrentPasswordValid) {
       throw new Error("Senha atual incorreta.");
@@ -97,7 +108,9 @@ export class AdminService implements IAdminService {
     // Gera o hash da nova senha
     const newHashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Salva o novo hash no banco de dados
-    await this.storeSettingRepository.updateAdminPassword(newHashedPassword);
+    // Salva o novo hash na nova tabela
+    await this.adminCredentialsRepository.updateAdminPassword(
+      newHashedPassword
+    );
   }
 }

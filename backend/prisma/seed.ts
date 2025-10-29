@@ -24,25 +24,6 @@ async function main() {
     `Hash da senha de admin gerado. Senha original: ${PLAIN_TEXT_PASSWORD}`
   );
 
-  // 2. Cria ou atualiza as configurações da loja (StoreSetting)
-  // O store_name é obrigatório para a AdminService funcionar
-  const storeSetting = await prisma.storeSetting.upsert({
-    where: { id: "admin_config" }, // Assume-se que você tem um ID fixo ou único para as configurações
-    update: {
-      admin_password: passwordHash,
-      store_name: "Look de Hoje",
-    },
-    create: {
-      id: "admin_config",
-      admin_password: passwordHash,
-      store_name: "Look de Hoje",
-    },
-  });
-
-  console.log(
-    `Configurações de Administrador salvas com ID: ${storeSetting.id}`
-  );
-
   // Opcional: Criar uma categoria inicial
   const category1 = await prisma.category.upsert({
     where: { slug: "vestidos" },
