@@ -1,35 +1,34 @@
-// backend/src/services/HeroService.ts
-
-// Importa a interface do repositório
+import { HeroSetting } from "@prisma/client"; // 🚨 CORREÇÃO: Usar HeroSetting (O nome do modelo principal)
 import { IHeroSettingRepository } from "../interfaces/IHeroSettingRepository";
-// Importa a entidade HeroSetting do Prisma
-import { HeroSetting } from "@prisma/client";
-// Importa o DTO para atualizações
+// 🚨 CORREÇÃO: Usar o DTO correto que existe no common/types.ts
 import { HeroSettingsDTO } from "../common/types";
 
-// CORREÇÃO: Adiciona 'export' para que a classe possa ser importada por outros arquivos
+// Assumindo que o tipo HeroSlide está definido na interface do repositório ou não é usado diretamente aqui
+interface HeroSlide {
+  /* ... */
+} // Pode ser importado da interface IHeroSettingRepository se definido lá
+
 export class HeroService {
-  // O construtor espera o repositório IHeroSettingRepository
   constructor(private heroSettingRepository: IHeroSettingRepository) {}
 
-  // Método para buscar as configurações do Hero
-  async getSettings(): Promise<Partial<HeroSetting> | null> {
+  // 🚨 CORREÇÃO: Ajustar o tipo de retorno e usar o método atualizado do repositório
+  async getSettingsAndSlides(): Promise<{
+    settings: HeroSetting | null;
+    slides: HeroSlide[];
+  }> {
+    // 1. Busca as configurações (HeroSetting)
     const settings = await this.heroSettingRepository.getSettings();
-    if (settings) {
-      // Retorna as configurações (pode adicionar lógica para remover dados sensíveis se houver)
-      return settings;
-    }
-    return null;
+
+    // 2. Chama getSlides com o ID da configuração
+    const slides = settings
+      ? await this.heroSettingRepository.getSlides(settings.id)
+      : [];
+
+    // 3. Retorna a combinação
+    return { settings, slides };
   }
 
-  // Método para atualizar as configurações do Hero
   async updateSettings(data: Partial<HeroSettingsDTO>): Promise<HeroSetting> {
-    // Adicione validações aqui se necessário (ex: verificar se a URL da imagem é válida)
-    if (!data.background_image_url && !data.title) {
-      throw new Error(
-        "Pelo menos um campo deve ser fornecido para atualização."
-      );
-    }
     return this.heroSettingRepository.updateSettings(data);
   }
 }

@@ -41,7 +41,7 @@ model Piece {
 }
 
 model StoreSetting {
-  id              String   @id @default(dbgenerated("'admin_config'")) @db.VarChar(50)
+  id              String   @id @map("id") @db.VarChar(50) // CORRIGIDO: Removido default fixo de admin_config
   store_name      String   @db.VarChar(255) // Agora só guarda informações da loja
   instagram_url   String?  @db.VarChar(255)
   whatsapp_url    String?  @db.VarChar(255)
@@ -67,10 +67,11 @@ model AdminCredentials {
 }
 
 model HeroSetting {
-  id           String   @id @default(uuid()) @map("id")
+  id           String   @id @map("id") // 🚨 CORREÇÃO: Removido @default(uuid())
   slides       Json? // Tipo JSON para armazenar os slides
   created_at   DateTime @default(now()) @map("created_at")
   updated_at   DateTime @updatedAt @map("updated_at")
-
+  is_active    Boolean @default(true) 
+  interval_ms  Int     @default(5000) 
   @@map("hero_settings")
 }

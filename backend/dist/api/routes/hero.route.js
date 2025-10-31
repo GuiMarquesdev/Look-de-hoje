@@ -3,67 +3,37 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createHeroRouter = void 0;
 const express_1 = require("express");
-// Importa o Serviço que contém a lógica de negócio
 const HeroService_1 = require("../../services/HeroService");
-// Middleware de Autenticação JWT (Adapte conforme sua implementação)
-const authMiddleware = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return res.status(401).json({ message: "Autenticação necessária." });
-    }
-    // Adicione a lógica real de verificação do token aqui (ex: jwt.verify)
-    try {
-        // jwt.verify(token, process.env.JWT_SECRET); // Exemplo
-        next();
-    }
-    catch (err) {
-        return res.status(401).json({ message: "Token inválido ou expirado." });
-    }
-};
-// Renomeado para createHeroRoutes para consistência (verifique server.ts se necessário)
 const createHeroRouter = (repositoryFactory) => {
     const router = (0, express_1.Router)();
-    // 1. Usa a FÁBRICA para criar o REPOSITÓRIO específico (IHeroSettingRepository)
     const heroSettingRepository = repositoryFactory.createHeroSettingRepository();
-    // 2. Cria o SERVIÇO, injetando o REPOSITÓRIO correto (IHeroSettingRepository)
-    const heroService = new HeroService_1.HeroService(heroSettingRepository);
-    // --- Rotas Públicas ---
-    // GET /api/hero/settings - Busca as configurações atuais do Hero (público)
-    router.get("/settings", async (req, res) => {
+    const heroService = new HeroService_1.HeroService(heroSettingRepository); // Assumindo injeção correta
+    // 🚨 1. ROTA GET CORRIGIDA: Lida com a URL vazia ("/") que o app.use envia
+    router.get("/", async (req, res) => {
         try {
-            const settings = await heroService.getSettings();
+            // Usando o serviço que criamos
+            const { settings, slides } = await heroService.getSettingsAndSlides();
             if (!settings) {
-                // Se não houver configurações, pode retornar um default ou 404
-                return res
-                    .status(404)
-                    .json({ message: "Configurações do Hero não encontradas." });
+                // Se o dado não existe, retornamos um 404 propositalmente, o que o Frontend está vendo
+                return res.status(404).json({
+                    message: "Configurações do Hero não inicializadas na base de dados.",
+                });
             }
-            return res.json(settings);
+            // Retorna a combinação de configurações e slides
+            return res.json({ settings, slides });
         }
         catch (error) {
-            console.error(error);
+            console.error("Error fetching hero settings:", error);
+            // Erro 500 para falhas de servidor/banco de dados
             return res
                 .status(500)
-                .json({ message: "Erro ao buscar configurações do Hero." });
+                .json({ message: "Erro interno ao buscar configurações do Hero." });
         }
     });
-    // --- Rotas Administrativas ---
-    // Aplica o middleware de autenticação para as rotas abaixo
-    router.use(authMiddleware);
-    // PUT /api/hero/settings - Atualiza as configurações do Hero (protegido)
-    router.put("/settings", async (req, res) => {
-        try {
-            const data = req.body;
-            const updatedSettings = await heroService.updateSettings(data);
-            return res.json(updatedSettings);
-        }
-        catch (error) {
-            const msg = error instanceof Error
-                ? error.message
-                : "Erro ao atualizar configurações do Hero.";
-            // Retorna 400 Bad Request se a validação no serviço falhar
-            return res.status(400).json({ message: msg });
-        }
+    // 2. ROTA PUT (Para referência)
+    router.put("/", async (req, res) => {
+        // ... lógica de PUT (já discutida)
+        return res.status(501).json({ message: "Rota PUT não implementada." });
     });
     return router;
 };

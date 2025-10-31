@@ -15,18 +15,17 @@ export interface ChangePasswordDTO {
   confirm_password: string;
 }
 
-// DTO para a criação de uma nova peça (Todos os campos obrigatórios para criação)
+// DTO para a criação de uma nova peça
 export interface CreatePieceDTO {
   title: string;
   description?: string;
   price: number;
   is_available: boolean;
   category_id: string;
-  // A URL/key da imagem será salva, não o arquivo em si
   image_urls: string[];
 }
 
-// DTO para atualizar uma peça existente (Todos os campos são opcionais para atualização)
+// DTO para atualizar uma peça existente
 export interface UpdatePieceDTO {
   title?: string;
   description?: string;
@@ -57,6 +56,7 @@ export interface HeroSettingsDTO {
   subtitle?: string;
   cta_text?: string;
   cta_link?: string;
-  background_image_url: string; // URL da imagem principal do Hero
+  background_image_url: string;
   is_active: boolean;
+  interval_ms: number; // 🚨 CORREÇÃO: Adicionando o campo
 }
