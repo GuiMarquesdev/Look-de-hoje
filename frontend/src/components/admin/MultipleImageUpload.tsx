@@ -1,3 +1,5 @@
+// src/components/admin/MultipleImageUpload.tsx
+
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, X } from "lucide-react";
@@ -6,12 +8,14 @@ import { toast } from "sonner";
 
 /**
  * Interface para a imagem do produto.
+ * - id: ID opcional. Necessário se for um slide existente no DB.
  * - url: Pode ser uma URL pública (se a imagem já existe) ou uma URL de objeto local (para preview).
  * - order: A ordem da imagem.
  * - file: O objeto File real, usado para upload se a imagem for nova.
  * - isNew: Flag para identificar imagens que precisam de upload.
  */
 interface ProductImage {
+  id?: string; // 🚨 CORREÇÃO: ID opcional adicionado
   url: string;
   order: number;
   file?: File;
@@ -71,7 +75,6 @@ const MultipleImageUpload: React.FC<MultipleImageUploadProps> = ({
   };
 
   // Função 'handleReorderImages' removida pois não estava implementada (sem drag-and-drop).
-
   // Função 'uploadImage' (específica do Supabase) REMOVIDA.
   // Função 'uploadAllImages' (lógica de upload) REMOVIDA.
 

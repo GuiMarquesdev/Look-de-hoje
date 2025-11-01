@@ -4,19 +4,21 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Settings, Plus, Image } from "lucide-react";
-import { API_URL } from "@/config/api"; // Assumindo que API_URL está definido
+import { Loader2, Settings, Image } from "lucide-react";
+import { API_URL } from "@/config/api";
 import {
   MultipleImageUpload,
   ProductImage,
 } from "@/components/admin/MultipleImageUpload";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch"; // 🚨 ADICIONADO: Componente Switch para is_active
 
 // Interfaces baseadas no modelo Prisma
 interface HeroSlide {
-  id: string;
+  id?: string; // Permitir que novos slides não tenham ID
   image_url: string;
-  alt_text: string;
-  link_url: string;
+  alt_text?: string;
+  link_url?: string;
   order: number;
 }
 
@@ -24,6 +26,12 @@ interface HeroSetting {
   id: string;
   is_active: boolean;
   interval_ms: number;
+  // Campos de texto adicionados
+  title?: string;
+  subtitle?: string;
+  cta_text?: string;
+  cta_link?: string;
+  background_image_url?: string;
 }
 
 interface HeroData {
@@ -37,12 +45,24 @@ const HeroManagement = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Estados Locais para Campos de Configuração
+  const [is_active, setIsActive] = useState(false);
+  const [interval_ms, setIntervalMs] = useState(5000);
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [cta_text, setCtaText] = useState("");
+  const [cta_link, setCtaLink] = useState("");
+  const [background_image_url, setBackgroundImageUrl] = useState("");
+
+  // Estado para gerenciar as imagens no componente de upload
+  const [productImages, setProductImages] = useState<ProductImage[]>([]);
+
   // ------------------------------------------
   // LÓGICA DE BUSCA DE DADOS (GET)
   // ------------------------------------------
   const fetchHeroSettings = async () => {
     setLoading(true);
-    setError(null); // Limpa erros anteriores
+    setError(null);
     try {
       const response = await fetch(`${API_URL}/hero`);
 
@@ -59,12 +79,31 @@ const HeroManagement = () => {
 
       const data: HeroData = await response.json();
       setHeroData(data);
+
+      // 🚨 ATUALIZAÇÃO DOS ESTADOS LOCAIS APÓS O FETCH
+      setIsActive(data.settings.is_active);
+      setIntervalMs(data.settings.interval_ms);
+      setTitle(data.settings.title || "");
+      setSubtitle(data.settings.subtitle || "");
+      setCtaText(data.settings.cta_text || "");
+      setCtaLink(data.settings.cta_link || "");
+      setBackgroundImageUrl(data.settings.background_image_url || "");
+
+      // Inicializa o estado de imagens com os slides do backend
+      setProductImages(
+        data.slides.map((slide) => ({
+          url: slide.image_url,
+          order: slide.order,
+          file: undefined,
+          isNew: false,
+        }))
+      );
+
       toast.success("Configurações do Hero carregadas com sucesso.");
     } catch (err) {
       const errorMessage = (err as Error).message;
       console.error("Error fetching hero settings:", errorMessage);
       setError(errorMessage);
-      // 🚨 Alerta de erro na tela
       toast.error(`Erro ao carregar configurações do Hero: ${errorMessage}`);
     } finally {
       setLoading(false);
@@ -75,16 +114,46 @@ const HeroManagement = () => {
     fetchHeroSettings();
   }, []);
 
+  // ------------------------------------------
+  // LÓGICA DE ATUALIZAÇÃO (PUT)
+  // ------------------------------------------
   const handleSaveSettings = async () => {
     if (!heroData) return;
     setIsSaving(true);
 
     try {
-      toast.info(
-        "Lógica de atualização de configurações do Hero ainda não implementada."
-      );
+      // O payload agora inclui os campos de texto e as configurações gerais
+      const payload = {
+        is_active: is_active,
+        interval_ms: interval_ms,
+        title: title,
+        subtitle: subtitle,
+        cta_text: cta_text,
+        cta_link: cta_link,
+        background_image_url: background_image_url,
+        slides: productImages.map((img) => ({
+          image_url: img.url,
+          order: img.order,
+          id: img.id,
+        })),
+      };
+
+      const response = await fetch(`${API_URL}/hero`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Falha ao salvar no servidor.");
+      }
+
+      toast.success("Configurações do Hero atualizadas com sucesso!");
+      fetchHeroSettings(); // Recarrega os dados
     } catch (e) {
       toast.error("Erro ao salvar configurações.");
+      console.error("Erro ao salvar:", e);
     } finally {
       setIsSaving(false);
     }
@@ -101,7 +170,7 @@ const HeroManagement = () => {
     );
   }
 
-  // 🚨 TRATAMENTO DE ERRO: Exibe um card de erro se a requisição falhar
+  // TRATAMENTO DE ERRO
   if (error) {
     return (
       <div className="p-6 text-center space-y-4">
@@ -128,8 +197,9 @@ const HeroManagement = () => {
     );
   }
 
-  // Caso o dado não seja carregado (nunca deveria acontecer se o loading/error funcionar, mas é um bom fallback)
+  // Fallback
   if (!heroData || !heroData.settings) {
+    // ... (código de fallback) ...
     return (
       <div className="p-6">
         <h1 className="text-3xl font-playfair font-bold">
@@ -159,23 +229,76 @@ const HeroManagement = () => {
       </div>
 
       <div className="grid gap-6">
-        {/* Card de Configurações Gerais */}
-        <Card>
+        {/* 🚨 RESTAURADO: Card de Configurações Gerais */}
+        <Card className="luxury-card">
           <CardHeader>
             <CardTitle className="font-playfair flex items-center gap-2">
               <Settings className="w-5 h-5 text-primary" />
               Configurações Gerais
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="font-montserrat text-sm text-muted-foreground">
-              Status Atual: {heroData.settings.is_active ? "Ativo" : "Inativo"}
-            </p>
-            <p className="font-montserrat text-sm text-muted-foreground">
-              Intervalo de Transição: {heroData.settings.interval_ms / 1000}{" "}
-              segundos
-            </p>
-            <div className="flex justify-end mt-4">
+          <CardContent className="space-y-4">
+            {/* Campo Ativo/Inativo (usando Switch) */}
+            <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <label className="text-base font-montserrat">Status</label>
+                <p className="text-sm text-muted-foreground font-montserrat">
+                  {is_active
+                    ? "HeroSection visível na página inicial."
+                    : "HeroSection oculta."}
+                </p>
+              </div>
+              <Switch checked={is_active} onCheckedChange={setIsActive} />
+            </div>
+
+            {/* Campo Intervalo de Transição */}
+            <div className="space-y-2">
+              <label className="font-montserrat text-sm">
+                Intervalo de Transição (em milissegundos)
+              </label>
+              <Input
+                type="number"
+                value={interval_ms}
+                onChange={(e) => setIntervalMs(Number(e.target.value))}
+                min={1000}
+                step={500}
+              />
+              <p className="text-xs text-muted-foreground">
+                Duração de cada slide: {interval_ms / 1000} segundos
+              </p>
+            </div>
+
+            {/* Campos de Texto */}
+            <h3 className="font-playfair text-lg font-semibold mt-6">
+              Conteúdo de Texto (Fallback)
+            </h3>
+            <Input
+              placeholder="Título (ex: Elegância em Cada Ocasião)"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <Input
+              placeholder="Subtítulo (ex: Alugue looks exclusivos)"
+              value={subtitle}
+              onChange={(e) => setSubtitle(e.target.value)}
+            />
+            <Input
+              placeholder="Texto do CTA (ex: Ver Coleção)"
+              value={cta_text}
+              onChange={(e) => setCtaText(e.target.value)}
+            />
+            <Input
+              placeholder="Link do CTA (ex: /colecao)"
+              value={cta_link}
+              onChange={(e) => setCtaLink(e.target.value)}
+            />
+            <Input
+              placeholder="URL da Imagem de Fundo (Fallback)"
+              value={background_image_url}
+              onChange={(e) => setBackgroundImageUrl(e.target.value)}
+            />
+
+            <div className="flex justify-end mt-4 pt-4 border-t">
               <Button
                 onClick={handleSaveSettings}
                 disabled={isSaving}
@@ -187,53 +310,26 @@ const HeroManagement = () => {
           </CardContent>
         </Card>
 
-        {/* Card de Gestão de Slides */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        {/* Card de Gestão de Slides (limpo) */}
+        <Card className="luxury-card">
+          <CardHeader>
             <CardTitle className="font-playfair flex items-center gap-2">
               <Image className="w-5 h-5 text-primary" />
-              Slides do Carrossel ({heroData.slides.length})
+              Slides do Carrossel ({productImages.length})
             </CardTitle>
-            <Button
-              variant="outline"
-              className="font-montserrat flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Slide
-            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* 🚨 Este componente precisa ser funcional */}
             <MultipleImageUpload
-              images={[]}
-              onChange={function (images: ProductImage[]): void {
-                throw new Error("Function not implemented.");
-              }} // imageURLs={heroData.slides.map(s => s.image_url)}
+              images={productImages}
+              onChange={setProductImages}
+              maxImages={10}
             />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {heroData.slides.map((slide) => (
-                <div key={slide.id} className="border p-4 rounded-lg space-y-2">
-                  <img
-                    src={slide.image_url}
-                    alt={slide.alt_text}
-                    className="w-full h-32 object-cover rounded"
-                  />
-                  <p className="text-sm font-montserrat">
-                    Ordem: {slide.order}
-                  </p>
-                  <p className="text-xs font-montserrat text-muted-foreground truncate">
-                    Link: {slide.link_url}
-                  </p>
-                  {/* Botões de Ação para o Slide (Editar/Deletar) */}
-                </div>
-              ))}
-              {heroData.slides.length === 0 && (
-                <p className="text-sm text-muted-foreground font-montserrat col-span-full">
-                  Nenhum slide encontrado. Adicione um novo para começar.
-                </p>
-              )}
-            </div>
+            {productImages.length === 0 && (
+              <p className="text-sm text-muted-foreground font-montserrat text-center pt-8">
+                Nenhum slide encontrado. Use o botão "Adicionar Fotos" acima
+                para enviar.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

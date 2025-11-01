@@ -10,8 +10,8 @@ export const createHeroRouter = (repositoryFactory: IRepositoryFactory) => {
   const heroSettingRepository = repositoryFactory.createHeroSettingRepository();
   const heroService = new HeroService(heroSettingRepository); // Assumindo injeção correta
 
-  // 🚨 1. ROTA GET CORRIGIDA: Lida com a URL vazia ("/") que o app.use envia
-  router.get("/", async (req: Request, res: Response) => {
+  // 🚨 1. Lida com a URL vazia ("/") que o app.use envia
+  router.get("/", async (_req: Request, res: Response) => {
     try {
       // Usando o serviço que criamos
       const { settings, slides } = await heroService.getSettingsAndSlides();
@@ -34,11 +34,57 @@ export const createHeroRouter = (repositoryFactory: IRepositoryFactory) => {
     }
   });
 
-  // 2. ROTA PUT (Para referência)
-  router.put("/", async (req: Request, res: Response) => {
-    // ... lógica de PUT (já discutida)
-    return res.status(501).json({ message: "Rota PUT não implementada." });
-  });
+  // 🚨 CORREÇÃO: Use router.route("/") para garantir o registro do PUT
+  router
+    .route("/")
+    .get(async (req: Request, res: Response) => {
+      // Código da rota GET /api/hero (mantido)
+      try {
+        const { settings, slides } = await heroService.getSettingsAndSlides();
+
+        if (!settings) {
+          return res.status(404).json({
+            message:
+              "Configurações do Hero não inicializadas na base de dados.",
+          });
+        }
+
+        return res.json({ settings, slides });
+      } catch (error: any) {
+        console.error("Error fetching hero settings:", error);
+        return res
+          .status(500)
+          .json({ message: "Erro interno ao buscar configurações do Hero." });
+      }
+    })
+    .put(async (req: Request, res: Response) => {
+      try {
+        const updatePayload: HeroUpdatePayload = req.body;
+
+        if (
+          !updatePayload.slides ||
+          updatePayload.is_active === undefined ||
+          updatePayload.interval_ms === undefined
+        ) {
+          return res.status(400).json({
+            message:
+              "Dados de configuração (slides, is_active e interval_ms) são obrigatórios.",
+          });
+        }
+
+        const updatedHero = await heroSettingRepository.updateHeroData(
+          updatePayload
+        );
+
+        return res.status(200).json(updatedHero);
+      } catch (error: any) {
+        console.error("Error updating hero settings:", error);
+        return res.status(500).json({
+          message:
+            error.message || "Erro interno ao salvar configurações do Hero.",
+        });
+      }
+    });
 
   return router;
 };
